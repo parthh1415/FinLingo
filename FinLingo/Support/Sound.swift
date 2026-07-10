@@ -11,9 +11,18 @@ import SwiftUI
 import AudioToolbox
 
 enum Sound {
-    /// A short system "tock" — Apple's built-in UI click.
+    /// Our original, synthesized click (`click.wav`) registered as a system sound once —
+    /// low-latency and overlap-friendly for rapid taps. Falls back to Apple's tock if missing.
+    private static let clickID: SystemSoundID = {
+        var id: SystemSoundID = 1104
+        if let url = Bundle.main.url(forResource: "click", withExtension: "wav") {
+            AudioServicesCreateSystemSoundID(url as CFURL, &id)
+        }
+        return id
+    }()
+
     static func tap() {
-        AudioServicesPlaySystemSound(1104)
+        AudioServicesPlaySystemSound(clickID)
     }
 }
 
