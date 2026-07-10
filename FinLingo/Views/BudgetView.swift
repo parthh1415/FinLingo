@@ -99,7 +99,7 @@ struct BudgetView: View {
 
                 peerBanner
 
-                Text("Your invested share grows ~10%/yr. Pick a plan:")
+                Text("Your invested share grows ~7%/yr. Pick a plan:")
                     .font(.system(.caption, design: .monospaced)).foregroundColor(dim)
 
                 ForEach(BudgetContent.strategies) { strategy in

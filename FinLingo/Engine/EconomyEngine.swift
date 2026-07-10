@@ -11,6 +11,12 @@ import Foundation
 import Combine
 import CoreGraphics
 
+/// Single source of truth for the assumed long-run investment return, used by the in-game
+/// compounding and by the Simulator's calculators so they always agree.
+enum FinRates {
+    static let annualReturn = 0.07
+}
+
 /// The economic simulation for a single play session.
 ///
 /// `EconomyEngine` observes a `GameState` and a `currentStage`, and is ticked
@@ -59,7 +65,7 @@ final class EconomyEngine: ObservableObject {
     /// Seconds in a year, for compounding invested money.
     private let secondsPerYear: Double = 365 * 24 * 3600
     /// Illustrative annual return applied to the invested balance.
-    private let annualReturn: Double = 0.10
+    private let annualReturn: Double = FinRates.annualReturn
 
     // MARK: - Private state
 

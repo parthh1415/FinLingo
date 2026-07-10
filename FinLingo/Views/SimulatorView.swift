@@ -368,7 +368,7 @@ private struct RetirementCalculator: View {
     @State private var years = 30.0
 
     private let employerMatchCap = 0.03     // employer matches dollar-for-dollar up to 3%
-    private let annualReturn = 0.07
+    private let annualReturn = FinRates.annualReturn
 
     private let cream = Color(red: 0.96, green: 0.90, blue: 0.70)
     private let amber = Color(red: 0.93, green: 0.70, blue: 0.32)
@@ -529,7 +529,7 @@ private struct CompoundGrower: View {
     var onBack: () -> Void
     @State private var monthly = 200.0
     @State private var years = 20.0
-    @State private var rate = 0.07
+    @State private var rate = FinRates.annualReturn
 
     private var future: Double {
         let r = rate / 12, n = years * 12
