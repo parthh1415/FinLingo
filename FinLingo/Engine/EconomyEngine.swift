@@ -137,26 +137,8 @@ final class EconomyEngine: ObservableObject {
             boostMultiplier = 1 + (heat / 100) * (maxBoost - 1)
         }
 
-        // Gear income lands as cash. Salary splits by the budget: the invested share
-        // goes into the compounding pot, the rest is spendable cash.
-        let salary = incomePerSec * dt
-        let alloc = min(max(gameState.investAllocation, 0), 1)
-        let invested = salary * alloc
-        gameState.cash += cashPerSec * dt + (salary - invested)
-        // Grow the existing balance first, then add this tick's fresh contribution — so new
-        // money doesn't earn a full period of return the instant it lands.
-        gameState.investedBalance += gameState.investedBalance * annualReturn * (dt / secondsPerYear)
-        gameState.investedBalance += invested
-
-        // Periodically snapshot net worth for the shareable progress curve.
-        sampleAccumulator += dt
-        if sampleAccumulator >= sampleInterval {
-            sampleAccumulator = 0
-            gameState.netWorthHistory.append(gameState.netWorth)
-            if gameState.netWorthHistory.count > maxSamples {
-                gameState.netWorthHistory.removeFirst(gameState.netWorthHistory.count - maxSamples)
-            }
-        }
+        // NOTE: money now advances on the monthly life-simulation clock (SimulationEngine),
+        // not per-frame — this update only drives the overclock boost visuals now.
     }
 
     // MARK: - Interaction
@@ -206,22 +188,9 @@ final class EconomyEngine: ObservableObject {
     /// - Returns: The amount of cash credited.
     @discardableResult
     func applyOfflineEarnings(now: Date) -> Double {
-        let elapsed = now.timeIntervalSince(gameState.lastSeen)
-        let clampedElapsed = min(max(0, elapsed), offlineCapSeconds)
-        let idlePerSec = computePerSec * currentStage.computeToCashRate
-        let salaryTotal = incomePerSec * clampedElapsed
-        let alloc = min(max(gameState.investAllocation, 0), 1)
-        let invested = salaryTotal * alloc
-        let credited = idlePerSec * clampedElapsed + (salaryTotal - invested)
-        gameState.cash += credited
-        gameState.investedBalance += gameState.investedBalance * annualReturn * (clampedElapsed / secondsPerYear)
-        gameState.investedBalance += invested
+        // Time only advances on the monthly life-simulation clock while the app is open, so
+        // there are no offline earnings to credit. Kept for the existing call site.
         gameState.lastSeen = now
-        // Drop a history point on return so the share curve reflects offline progress too.
-        gameState.netWorthHistory.append(gameState.netWorth)
-        if gameState.netWorthHistory.count > maxSamples {
-            gameState.netWorthHistory.removeFirst(gameState.netWorthHistory.count - maxSamples)
-        }
-        return credited
+        return 0
     }
 }

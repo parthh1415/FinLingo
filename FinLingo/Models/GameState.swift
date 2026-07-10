@@ -55,6 +55,8 @@ final class GameState: ObservableObject, Codable {
     @Published var jobTitle: String
     /// Existing debt (loans/cards); subtracts from net worth and pre-fills the debt tool.
     @Published var debt: Double
+    /// Months elapsed in the life simulation (0 at the start). Drives the timeline + age.
+    @Published var monthIndex: Int
 
     /// Everything the player is worth: spendable cash plus investments, minus debt.
     var netWorth: Double { cash + investedBalance - debt }
@@ -81,7 +83,8 @@ final class GameState: ObservableObject, Codable {
         playerName: String = "",
         age: Int = 25,
         jobTitle: String = "",
-        debt: Double = 0
+        debt: Double = 0,
+        monthIndex: Int = 0
     ) {
         self.companyName = companyName
         self.cash = cash
@@ -105,6 +108,7 @@ final class GameState: ObservableObject, Codable {
         self.age = age
         self.jobTitle = jobTitle
         self.debt = debt
+        self.monthIndex = monthIndex
     }
 
     // MARK: - Convenience
@@ -127,7 +131,7 @@ final class GameState: ObservableObject, Codable {
         case hasOnboarded, monthlyIncome, monthlySpending, goals, household
         case sideHustles, negotiationDone
         case investAllocation, investedBalance, netWorthHistory
-        case playerName, age, jobTitle, debt
+        case playerName, age, jobTitle, debt, monthIndex
     }
 
     convenience init(from decoder: Decoder) throws {
@@ -155,7 +159,8 @@ final class GameState: ObservableObject, Codable {
             playerName: try c.decodeIfPresent(String.self, forKey: .playerName) ?? "",
             age: try c.decodeIfPresent(Int.self, forKey: .age) ?? 25,
             jobTitle: try c.decodeIfPresent(String.self, forKey: .jobTitle) ?? "",
-            debt: try c.decodeIfPresent(Double.self, forKey: .debt) ?? 0
+            debt: try c.decodeIfPresent(Double.self, forKey: .debt) ?? 0,
+            monthIndex: try c.decodeIfPresent(Int.self, forKey: .monthIndex) ?? 0
         )
     }
 
@@ -183,5 +188,6 @@ final class GameState: ObservableObject, Codable {
         try c.encode(age, forKey: .age)
         try c.encode(jobTitle, forKey: .jobTitle)
         try c.encode(debt, forKey: .debt)
+        try c.encode(monthIndex, forKey: .monthIndex)
     }
 }

@@ -28,6 +28,7 @@ struct GameView: View {
     @StateObject private var economy: EconomyEngine
     @StateObject private var stageController: StageController
     @StateObject private var ui: GameUIState
+    @StateObject private var sim: SimulationEngine
     @State private var scene: WorldScene
 
     // HUD band proportions — from the GameView scaffold.
@@ -49,8 +50,11 @@ struct GameView: View {
         _economy = StateObject(wrappedValue: engine)
         _stageController = StateObject(wrappedValue: controller)
         _ui = StateObject(wrappedValue: uiState)
+        _sim = StateObject(wrappedValue: SimulationEngine(gameState: gs))
         _scene = State(initialValue: world)
     }
+
+    private let simBarHeight: CGFloat = 54
 
     var body: some View {
         ZStack {
@@ -60,11 +64,15 @@ struct GameView: View {
             GeometryReader { geo in
                 let topH = geo.size.height * topHUDHeightFraction
                 let bottomH = geo.size.height * bottomHUDHeightFraction
-                let gameH = max(0, geo.size.height - topH - bottomH)
+                let gameH = max(0, geo.size.height - topH - bottomH - simBarHeight)
 
                 VStack(spacing: 0) {
                     TopHUDView(gameState: gameState, ui: ui)
                         .frame(width: geo.size.width, height: topH)
+
+                    SimBar(sim: sim, gameState: gameState)
+                        .padding(.horizontal, 12)
+                        .frame(width: geo.size.width, height: simBarHeight)
 
                     ZStack {
                         Color(PixelArtStyle.Palette.darkOutside)
@@ -107,8 +115,11 @@ struct GameView: View {
             if ui.welcomeBackAmount >= 1 {
                 WelcomeBackView(amount: ui.welcomeBackAmount) { ui.welcomeBackAmount = 0 }
             }
+            if let event = sim.pendingEvent {
+                LifeEventView(event: event) { sim.resolve($0) }
+            }
         }
-        .onAppear { creditOfflineEarnings() }
+        .onAppear { creditOfflineEarnings(); sim.start() }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
@@ -147,10 +158,12 @@ private struct TopHUDView: View {
     var body: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("CASH").font(.system(size: 11, weight: .semibold, design: .monospaced)).foregroundStyle(hudLabel)
-                Text(CurrencyFormat.short(gameState.cash))
-                    .font(.system(size: 22, weight: .bold, design: .monospaced))
+                Text("NET WORTH").font(.system(size: 11, weight: .semibold, design: .monospaced)).foregroundStyle(hudLabel)
+                Text(CurrencyFormat.signed(gameState.netWorth))
+                    .font(.system(size: 24, weight: .bold, design: .monospaced))
                     .foregroundStyle(.white).monospacedDigit()
+                Text("cash \(CurrencyFormat.short(gameState.cash))")
+                    .font(.system(size: 10, design: .monospaced)).foregroundStyle(hudLabel.opacity(0.8))
             }
             Spacer()
             Button { ui.closePanels(); ui.showCareer = true } label: {
