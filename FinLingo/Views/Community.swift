@@ -58,7 +58,8 @@ struct ShareCard: View {
         let history = gameState.netWorthHistory
         let now = gameState.netWorth
         if history.count >= 2 { return history + [now] }
-        return [1000, now]
+        // Fall back to the real starting net worth (seeded at onboarding), not a hardcoded $1k.
+        return [history.first ?? now, now]
     }
 
     var body: some View {
@@ -72,7 +73,7 @@ struct ShareCard: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("NET WORTH").font(.system(.caption2, design: .monospaced).weight(.bold)).foregroundColor(green)
-                Text(CurrencyFormat.short(gameState.netWorth))
+                Text(CurrencyFormat.signed(gameState.netWorth))
                     .font(.system(size: 44, weight: .heavy, design: .monospaced)).foregroundColor(cream).monospacedDigit()
             }
 

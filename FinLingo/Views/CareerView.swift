@@ -133,7 +133,7 @@ struct CareerView: View {
                         .padding(10).background(negotiationBackground(i))
                         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     }
-                    .buttonStyle(.plain).disabled(negotiationPick != nil)
+                    .buttonStyle(.clicky).disabled(negotiationPick != nil)
                 }
                 if let negotiationPick {
                     Text(negotiationPick == CareerContent.negotiationCorrect

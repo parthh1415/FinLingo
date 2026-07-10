@@ -42,8 +42,8 @@ struct GameView: View {
         let controller = StageController(stages: stages, gameState: gs)
         let uiState = GameUIState()
         let world = WorldScene(gameState: gs, economy: engine, stageController: controller)
-        world.onOpenLessons = { [uiState] in uiState.showLessons = true }
-        world.onOpenSimulator = { [uiState] in uiState.showSimulator = true }
+        world.onOpenLessons = { [uiState] in Sound.tap(); uiState.showLessons = true }
+        world.onOpenSimulator = { [uiState] in Sound.tap(); uiState.showSimulator = true }
 
         _gameState = StateObject(wrappedValue: gs)
         _economy = StateObject(wrappedValue: engine)
@@ -158,7 +158,7 @@ private struct TopHUDView: View {
                         .foregroundStyle(hudAmber).monospacedDigit()
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.clicky)
         }
         .padding(.horizontal, 16)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -185,7 +185,7 @@ private struct BottomHUDView: View {
                         .foregroundStyle(hudTerm).monospacedDigit()
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.clicky)
             Spacer()
             Button { ui.showMarketplace = true } label: {
                 Text("SHOP")

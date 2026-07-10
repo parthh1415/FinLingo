@@ -175,7 +175,7 @@ struct LessonsView: View {
             LazyVStack(spacing: 10) {
                 ForEach(LessonContent.ordered(for: gameState.goals)) { lesson in
                     Button { selected = lesson } label: { lessonRow(lesson) }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.clicky)
                 }
             }
             .padding(16)
@@ -254,7 +254,7 @@ private struct LessonDetail: View {
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.white.opacity(0.08), lineWidth: 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.clicky)
                     .disabled(picked != nil)
                 }
 

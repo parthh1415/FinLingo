@@ -82,7 +82,7 @@ struct BudgetView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    stat("NET WORTH", CurrencyFormat.short(gameState.netWorth), cream)
+                    stat("NET WORTH", CurrencyFormat.signed(gameState.netWorth), cream)
                     Spacer()
                     stat("INVESTED", CurrencyFormat.short(gameState.investedBalance), term)
                 }
@@ -95,7 +95,7 @@ struct BudgetView: View {
                         .background(term)
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.clicky)
 
                 peerBanner
 
@@ -104,7 +104,7 @@ struct BudgetView: View {
 
                 ForEach(BudgetContent.strategies) { strategy in
                     Button { choose(strategy) } label: { strategyCard(strategy) }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.clicky)
                 }
             }
             .padding(16)

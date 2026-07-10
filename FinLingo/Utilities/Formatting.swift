@@ -19,6 +19,13 @@ enum CurrencyFormat {
 
     static func short(_ value: Int) -> String { short(Double(value)) }
 
+    /// Like `short`, but keeps the sign — for net worth, which can go negative when debt
+    /// outweighs assets. e.g. -2_500 → "-$2.5K".
+    static func signed(_ value: Double) -> String {
+        guard value.isFinite else { return "$0" }
+        return value < 0 ? "-" + short(-value) : short(value)
+    }
+
     /// Compact rate without the `$` prefix logic duplicated — e.g. "$3.2M/s".
     static func perSecond(_ value: Double) -> String { short(value) + "/s" }
 }

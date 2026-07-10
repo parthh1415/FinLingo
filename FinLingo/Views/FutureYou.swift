@@ -20,7 +20,7 @@ struct FutureYouView: View {
     init(gameState: GameState, onBack: @escaping () -> Void) {
         self.gameState = gameState
         self.onBack = onBack
-        _age = State(initialValue: Double(min(max(gameState.age, 18), 45)))
+        _age = State(initialValue: Double(min(max(gameState.age, 16), 64)))
     }
 
     private let targetAge = 65
@@ -37,7 +37,7 @@ struct FutureYouView: View {
 
     private var allocation: Double { min(max(gameState.investAllocation, 0), 1) }
     private var monthly: Double { gameState.monthlyIncome * allocation }
-    private var boostedRate: Double { min(allocation + 0.2, 0.6) }
+    private var boostedRate: Double { min(allocation + 0.2, 0.9) }
     private var boostedMonthly: Double { gameState.monthlyIncome * boostedRate }
 
     // Year-by-year net worth from the player's current age to retirement.
@@ -71,7 +71,7 @@ struct FutureYouView: View {
                 headline
                 chart.frame(height: 170)
                 legend
-                CalcSliderLite(label: "Your age now", value: $age, range: 18...45, step: 1, display: "\(Int(age))")
+                CalcSliderLite(label: "Your age now", value: $age, range: 16...64, step: 1, display: "\(Int(age))")
                 milestones
                 nudge
             }
@@ -90,7 +90,7 @@ struct FutureYouView: View {
                 .font(.system(.caption2, design: .monospaced).weight(.bold)).foregroundColor(green)
             Text(CurrencyFormat.short(current.last ?? 0))
                 .font(.system(size: 40, weight: .heavy, design: .monospaced)).foregroundColor(cream).monospacedDigit()
-            Text("from \(CurrencyFormat.short(gameState.netWorth)) today, investing \(Int(allocation * 100))% of a \(CurrencyFormat.short(gameState.monthlyIncome))/mo income")
+            Text("from \(CurrencyFormat.signed(gameState.netWorth)) today, investing \(Int(allocation * 100))% of a \(CurrencyFormat.short(gameState.monthlyIncome))/mo income")
                 .font(.system(.caption2, design: .monospaced)).foregroundColor(dim)
         }
     }

@@ -46,7 +46,7 @@ struct OnboardingView: View {
     private var dim: Color { cream.opacity(0.45) }
 
     private var income: Double? {
-        guard let value = Double(incomeText), value > 0 else { return nil }
+        guard let value = Double(incomeText), value.isFinite, value > 0 else { return nil }
         return value
     }
 
@@ -139,7 +139,7 @@ struct OnboardingView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 999, style: .continuous))
                         .overlay(RoundedRectangle(cornerRadius: 999, style: .continuous).stroke(edge.opacity(isOn(option.id) ? 0 : 0.4), lineWidth: 1))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.clicky)
             }
         }
     }
@@ -161,12 +161,18 @@ struct OnboardingView: View {
 
     private func submit() {
         guard let income else { return }
-        // Cap the free-text numbers so downstream Int() conversions can never overflow/crash.
+        // Sanitize free text: reject non-finite (a pasted "nan"/"inf"), clamp to a sane range
+        // so nothing downstream (Int(), sliders) can crash on garbage.
         let cap = 100_000_000.0
-        let spending = min(max(Double(spendingText) ?? 0, 0), cap)
-        let savings = min(max(Double(savingsText) ?? 0, 0), cap)
-        let debt = min(max(Double(debtText) ?? 0, 0), cap)
+        func money(_ s: String) -> Double {
+            let v = Double(s) ?? 0
+            return v.isFinite ? min(max(v, 0), cap) : 0
+        }
+        let spending = money(spendingText)
+        let savings = money(savingsText)
+        let debt = money(debtText)
         let age = min(max(Int(ageText) ?? 25, 16), 100)
+        let startingNetWorth = 1000 + savings - debt
         let state = GameState(
             cash: 1000,
             lastSeen: Date(),
@@ -178,6 +184,9 @@ struct OnboardingView: View {
             // Their existing savings/investments become the starting invested balance so it
             // compounds and shows up in net worth and Future You.
             investedBalance: savings,
+            // Seed the progress curve with their true starting net worth so a share right
+            // after onboarding shows an accurate baseline, not a hardcoded $1,000.
+            netWorthHistory: [startingNetWorth],
             playerName: nameText.trimmingCharacters(in: .whitespaces),
             age: age,
             jobTitle: jobText.trimmingCharacters(in: .whitespaces),

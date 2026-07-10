@@ -11,10 +11,13 @@ struct ContentView: View {
     @State private var onboarded = PersistenceController.load()?.hasOnboarded ?? false
 
     var body: some View {
-        if onboarded {
-            GameView()
-        } else {
-            OnboardingView { onboarded = true }
+        Group {
+            if onboarded {
+                GameView()
+            } else {
+                OnboardingView { onboarded = true }
+            }
         }
+        .buttonStyle(.clicky) // every button clicks by default
     }
 }

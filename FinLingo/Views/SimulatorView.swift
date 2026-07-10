@@ -160,7 +160,7 @@ struct SimulatorView: View {
             .background(amber)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.clicky)
     }
 
     private func toolCard(_ title: String, _ blurb: String, action: @escaping () -> Void) -> some View {
@@ -175,7 +175,7 @@ struct SimulatorView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.06), lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.clicky)
     }
 
     private var scenarioList: some View {
@@ -185,9 +185,9 @@ struct SimulatorView: View {
                     Text("‹ TOOLS").font(.system(.caption, design: .monospaced).weight(.bold)).foregroundColor(dim)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.clicky)
                 ForEach(TradingContent.scenarios) { scenario in
-                    Button { selected = scenario } label: { scenarioRow(scenario) }.buttonStyle(.plain)
+                    Button { selected = scenario } label: { scenarioRow(scenario) }.buttonStyle(.clicky)
                 }
             }
             .padding(16)
@@ -233,7 +233,9 @@ private struct TradingSandbox: View {
     @State private var playing = false
 
     // Drives auto-play: one trading day advances every tick while `playing`.
-    private let clock = Timer.publish(every: 0.45, on: .main, in: .common).autoconnect()
+    // @State so the publisher is created ONCE and survives the frequent re-renders caused
+    // by the background economy ticking — a plain `let` would rebuild it every frame and stall.
+    @State private var clock = Timer.publish(every: 0.45, on: .main, in: .common).autoconnect()
 
     private let screenGreen = Color(red: 0.55, green: 0.80, blue: 0.52)
     private let cream = Color(red: 0.96, green: 0.90, blue: 0.70)
@@ -262,7 +264,7 @@ private struct TradingSandbox: View {
         .frame(maxHeight: 500)
         .onReceive(clock) { _ in
             guard playing else { return }
-            if isLastDay { playing = false } else { withAnimation(.linear(duration: 0.25)) { day += 1 } }
+            if isLastDay { playing = false } else { day += 1 }
         }
     }
 
