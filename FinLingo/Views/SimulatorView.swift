@@ -2,65 +2,46 @@
 //  SimulatorView.swift
 //  FinLingo
 //
-//  The right laptop's screen: practice money moves against real historical data. The player
-//  makes a call, sees what actually happened, and earns in-game cash for playing it out.
+//  The right laptop: a hands-on trading sandbox. Real historical daily prices play out one
+//  day at a time; the player buys and sells with practice money and watches their P&L. Cash
+//  out in profit and the gains convert to in-game cash (once per scenario). This is practice,
+//  not a quiz — Lessons teaches the theory, the Simulator is where you actually do it.
 //
 
 import SwiftUI
 
-struct Challenge: Identifiable {
+struct TradeScenario: Identifiable {
     let id: String
     let title: String
-    let setup: String
-    let question: String
-    let options: [String]
-    let correctIndex: Int
-    /// Shown after the player answers — the real-world outcome.
-    let outcome: String
-    let reward: Double
+    let symbol: String
+    let blurb: String
+    let prices: [Double] // real daily closes, oldest first
 }
 
-enum ChallengeContent {
-    static let all: [Challenge] = [
-        Challenge(
-            id: "sp500_decade",
-            title: "Index funds over a decade",
-            setup: "You invest $1,000 in an S&P 500 index fund at the start of 2010 and don't touch it, dividends reinvested.",
-            question: "Roughly what is it worth 10 years later, at the start of 2020?",
-            options: ["$1,300", "$2,100", "$3,500"],
-            correctIndex: 2,
-            outcome: "About $3,500. The S&P 500's total return over the 2010s was roughly 250% — near 13% a year. Staying invested and reinvesting dividends is what compounding looks like.",
-            reward: 150
+enum TradingContent {
+    static let startingCash: Double = 10_000
+
+    // Real AAPL daily closes (source: market data), two non-overlapping windows.
+    static let scenarios: [TradeScenario] = [
+        TradeScenario(
+            id: "aapl_summer",
+            title: "Buy the dip?",
+            symbol: "AAPL",
+            blurb: "A month of Apple. It slides, then rips. Can you time it?",
+            prices: [308.33, 310.85, 312.51, 312.06, 306.31, 315.20, 310.26, 311.23, 307.34,
+                     301.54, 290.55, 291.58, 295.63, 291.13, 296.42, 299.24, 295.95, 298.01,
+                     297.01, 294.30, 293.08, 275.15, 283.78, 281.74, 289.36, 294.38, 308.63,
+                     312.66, 310.66, 313.39, 316.22]
         ),
-        Challenge(
-            id: "cash_vs_hysa",
-            title: "Cash vs. high-yield savings",
-            setup: "You set aside $1,000 for 5 years. Option A leaves it as cash. Option B puts it in a 4% high-yield savings account.",
-            question: "How much MORE does Option B have after 5 years?",
-            options: ["$0", "About $50", "About $217"],
-            correctIndex: 2,
-            outcome: "About $217. At 4% compounding, $1,000 becomes ~$1,217 in 5 years. Idle cash also quietly loses value to inflation — an easy win most people skip.",
-            reward: 100
-        ),
-        Challenge(
-            id: "inflation_bite",
-            title: "What inflation does",
-            setup: "You keep $1,000 in a jar. Over the last few years U.S. inflation averaged roughly 4% a year.",
-            question: "After ~3 years, what can that $1,000 buy, in today's money?",
-            options: ["About $1,120", "About $1,000", "About $890"],
-            correctIndex: 2,
-            outcome: "About $890. At ~4% inflation for 3 years, cash loses roughly 11% of its buying power. Money that isn't at least keeping pace is shrinking.",
-            reward: 100
-        ),
-        Challenge(
-            id: "buy_the_crash",
-            title: "Staying in through a crash",
-            setup: "March 2020: COVID crashes the market about 34% in a few weeks. It's scary. You keep your money invested and keep adding a little each month.",
-            question: "Where was the S&P 500 about a year later, in early 2021?",
-            options: ["Still deep in the red", "Roughly back to even", "At new all-time highs"],
-            correctIndex: 2,
-            outcome: "New all-time highs. The market recovered its losses by August 2020 and kept climbing. Selling in the panic locked in losses; staying invested — and buying while it was down — paid off.",
-            reward: 150
+        TradeScenario(
+            id: "aapl_spring",
+            title: "Riding a trend",
+            symbol: "AAPL",
+            blurb: "An earlier stretch — a steadier climb with a few wobbles.",
+            prices: [246.63, 253.79, 255.63, 255.92, 258.86, 253.50, 258.90, 260.49, 260.48,
+                     259.20, 258.83, 266.43, 263.40, 270.23, 273.05, 266.17, 273.17, 273.43,
+                     271.06, 267.61, 270.71, 270.17, 271.35, 280.14, 276.83, 284.18, 287.51,
+                     287.44, 293.32]
         ),
     ]
 }
@@ -69,9 +50,8 @@ struct SimulatorView: View {
     @ObservedObject var gameState: GameState
     var onClose: () -> Void
 
-    @State private var selected: Challenge?
+    @State private var selected: TradeScenario?
 
-    private let scrim = Color.black.opacity(0.6)
     private let screen = Color(red: 0.055, green: 0.075, blue: 0.09)
     private let edge = Color(red: 0.83, green: 0.66, blue: 0.33)
     private let cream = Color(red: 0.96, green: 0.90, blue: 0.70)
@@ -81,15 +61,15 @@ struct SimulatorView: View {
 
     var body: some View {
         ZStack {
-            scrim.ignoresSafeArea().contentShape(Rectangle()).onTapGesture { onClose() }
+            Color.black.opacity(0.6).ignoresSafeArea().contentShape(Rectangle()).onTapGesture { onClose() }
 
             VStack(spacing: 0) {
                 titleBar
                 Rectangle().fill(edge.opacity(0.35)).frame(height: 1)
-                if let challenge = selected {
-                    ChallengeDetail(challenge: challenge, gameState: gameState, palette: palette) { selected = nil }
+                if let scenario = selected {
+                    TradingSandbox(scenario: scenario, gameState: gameState) { selected = nil }
                 } else {
-                    challengeList
+                    scenarioList
                 }
                 Rectangle().fill(edge.opacity(0.35)).frame(height: 1)
                 footer
@@ -97,16 +77,10 @@ struct SimulatorView: View {
             .background(screen)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(edge.opacity(0.75), lineWidth: 2))
-            .shadow(color: edge.opacity(0.25), radius: 22, y: 10)
-            .contentShape(Rectangle())
-            .onTapGesture { }
+            .contentShape(Rectangle()).onTapGesture { }
             .padding(.horizontal, 20)
         }
         .font(.system(.body, design: .monospaced))
-    }
-
-    private var palette: TerminalPalette {
-        TerminalPalette(screen: screen, edge: edge, cream: cream, amber: amber, term: term, dim: dim)
     }
 
     private var titleBar: some View {
@@ -118,42 +92,36 @@ struct SimulatorView: View {
             }
             Text("simulator.finlingo").font(.system(.footnote, design: .monospaced)).foregroundColor(dim)
             Spacer()
-            Text(CurrencyFormat.short(gameState.cash))
-                .font(.system(.headline, design: .monospaced).weight(.bold))
-                .foregroundColor(amber).monospacedDigit()
         }
         .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
     }
 
-    private var challengeList: some View {
+    private var scenarioList: some View {
         ScrollView {
             LazyVStack(spacing: 10) {
-                Text("> practice with real market history")
-                    .font(.system(.caption, design: .monospaced)).foregroundColor(term.opacity(0.9))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                ForEach(ChallengeContent.all) { challenge in
-                    Button { selected = challenge } label: { challengeRow(challenge) }
-                        .buttonStyle(.plain)
+                Text("> practice trading real market history").font(.system(.caption, design: .monospaced))
+                    .foregroundColor(term.opacity(0.9)).frame(maxWidth: .infinity, alignment: .leading)
+                ForEach(TradingContent.scenarios) { scenario in
+                    Button { selected = scenario } label: { scenarioRow(scenario) }.buttonStyle(.plain)
                 }
             }
             .padding(16)
         }
-        .frame(maxHeight: 420)
+        .frame(maxHeight: 440)
     }
 
-    private func challengeRow(_ challenge: Challenge) -> some View {
-        let done = gameState.completedChallenges.contains(challenge.id)
-        return HStack(spacing: 12) {
-            Text(challenge.title).font(.system(.headline, design: .monospaced)).foregroundColor(cream)
-            Spacer(minLength: 8)
-            if done {
-                Text("DONE ✓").font(.system(.caption, design: .monospaced).weight(.bold)).foregroundColor(term)
-            } else {
-                Text("+\(CurrencyFormat.short(challenge.reward))")
-                    .font(.system(.subheadline, design: .monospaced).weight(.bold)).foregroundColor(amber)
+    private func scenarioRow(_ scenario: TradeScenario) -> some View {
+        let done = gameState.completedChallenges.contains("trade_\(scenario.id)")
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text("\(scenario.symbol) · \(scenario.title)").font(.system(.headline, design: .monospaced)).foregroundColor(cream)
+                Spacer()
+                if done { Text("TRADED ✓").font(.system(.caption, design: .monospaced).weight(.bold)).foregroundColor(term) }
             }
+            Text(scenario.blurb).font(.system(.caption, design: .monospaced)).foregroundColor(dim)
         }
         .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white.opacity(0.035))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.06), lineWidth: 1))
@@ -167,81 +135,163 @@ struct SimulatorView: View {
     }
 }
 
-private struct ChallengeDetail: View {
-    let challenge: Challenge
+private struct TradingSandbox: View {
+    let scenario: TradeScenario
     @ObservedObject var gameState: GameState
-    let palette: TerminalPalette
     var onBack: () -> Void
 
-    @State private var picked: Int?
+    @State private var day = 0
+    @State private var cash = TradingContent.startingCash
+    @State private var shares = 0.0
+    @State private var cashedOut = false
+    @State private var rewardGiven = 0.0
 
-    private var alreadyDone: Bool { gameState.completedChallenges.contains(challenge.id) }
+    private let screenGreen = Color(red: 0.55, green: 0.80, blue: 0.52)
+    private let cream = Color(red: 0.96, green: 0.90, blue: 0.70)
+    private let amber = Color(red: 0.93, green: 0.70, blue: 0.32)
+    private let red = Color(red: 0.86, green: 0.28, blue: 0.24)
+    private var dim: Color { cream.opacity(0.45) }
+
+    private var price: Double { scenario.prices[day] }
+    private var isLastDay: Bool { day >= scenario.prices.count - 1 }
+    private var portfolio: Double { cash + shares * price }
+    private var profit: Double { portfolio - TradingContent.startingCash }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text(challenge.title).font(.system(.title3, design: .monospaced).weight(.bold)).foregroundColor(palette.cream)
-                Text(challenge.setup).font(.system(.subheadline, design: .monospaced)).foregroundColor(palette.cream.opacity(0.85)).lineSpacing(3)
-                Text(challenge.question).font(.system(.subheadline, design: .monospaced).weight(.bold)).foregroundColor(palette.amber)
-
-                ForEach(challenge.options.indices, id: \.self) { i in
-                    Button { pick(i) } label: {
-                        HStack {
-                            Text(challenge.options[i]).font(.system(.subheadline, design: .monospaced)).foregroundColor(palette.cream)
-                            Spacer()
-                            if let picked, picked == i {
-                                Text(i == challenge.correctIndex ? "✓" : "✗")
-                                    .foregroundColor(i == challenge.correctIndex ? palette.term : Color(red: 0.86, green: 0.28, blue: 0.24))
-                            }
-                        }
-                        .padding(12)
-                        .background(background(for: i))
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.white.opacity(0.08), lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(picked != nil)
-                }
-
-                if picked != nil {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("WHAT REALLY HAPPENED").font(.system(.caption2, design: .monospaced).weight(.bold)).foregroundColor(palette.term)
-                        Text(challenge.outcome).font(.system(.caption, design: .monospaced)).foregroundColor(palette.cream.opacity(0.85)).lineSpacing(3)
-                        if !alreadyDone {
-                            Text("+\(CurrencyFormat.short(challenge.reward)) earned")
-                                .font(.system(.caption, design: .monospaced).weight(.bold)).foregroundColor(palette.amber)
-                        }
-                    }
-                    .padding(12)
-                    .background(palette.term.opacity(0.10))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                }
-
+            VStack(alignment: .leading, spacing: 14) {
+                header
+                chart
+                positionPanel
+                if cashedOut { resultPanel } else { controls }
                 Button { onBack() } label: {
-                    Text("‹ BACK").font(.system(.caption, design: .monospaced).weight(.bold)).foregroundColor(palette.dim)
+                    Text("‹ BACK").font(.system(.caption, design: .monospaced).weight(.bold)).foregroundColor(dim)
                 }
-                .padding(.top, 4)
             }
             .padding(16)
         }
-        .frame(maxHeight: 460)
+        .frame(maxHeight: 500)
     }
 
-    private func background(for index: Int) -> Color {
-        guard let picked else { return Color.white.opacity(0.035) }
-        if index == challenge.correctIndex { return palette.term.opacity(0.18) }
-        if index == picked { return Color(red: 0.86, green: 0.28, blue: 0.24).opacity(0.18) }
-        return Color.white.opacity(0.035)
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(scenario.symbol).font(.system(.title3, design: .monospaced).weight(.bold)).foregroundColor(cream)
+                Text("Day \(day + 1)/\(scenario.prices.count)").font(.system(.caption2, design: .monospaced)).foregroundColor(dim)
+            }
+            Spacer()
+            Text("$" + String(format: "%.2f", price)).font(.system(.title3, design: .monospaced).weight(.bold)).foregroundColor(amber).monospacedDigit()
+        }
     }
 
-    private func pick(_ index: Int) {
-        guard picked == nil else { return }
-        picked = index
-        // Playing a challenge through pays out once, whatever the answer — the lesson is in seeing the real outcome.
-        if !alreadyDone {
-            gameState.cash += challenge.reward
-            gameState.completedChallenges.insert(challenge.id)
+    private var chart: some View {
+        GeometryReader { geo in
+            let visible = Array(scenario.prices[0...day])
+            let lo = visible.min() ?? 0
+            let hi = visible.max() ?? 1
+            let span = max(hi - lo, 0.0001)
+            Path { p in
+                for (i, value) in visible.enumerated() {
+                    let x = visible.count == 1 ? 0 : geo.size.width * CGFloat(i) / CGFloat(scenario.prices.count - 1)
+                    let y = geo.size.height * (1 - CGFloat((value - lo) / span))
+                    if i == 0 { p.move(to: CGPoint(x: x, y: y)) } else { p.addLine(to: CGPoint(x: x, y: y)) }
+                }
+            }
+            .stroke(profit >= 0 ? screenGreen : red, style: StrokeStyle(lineWidth: 2, lineJoin: .round))
+        }
+        .frame(height: 90)
+        .padding(10)
+        .background(Color.white.opacity(0.03))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var positionPanel: some View {
+        HStack {
+            stat("CASH", "$" + String(format: "%.0f", cash), cream)
+            Spacer()
+            stat("SHARES", String(format: "%.2f", shares), cream)
+            Spacer()
+            stat("VALUE", "$" + String(format: "%.0f", portfolio), profit >= 0 ? screenGreen : red)
+        }
+    }
+
+    private func stat(_ label: String, _ value: String, _ color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(.system(size: 10, design: .monospaced)).foregroundColor(dim)
+            Text(value).font(.system(.subheadline, design: .monospaced).weight(.bold)).foregroundColor(color).monospacedDigit()
+        }
+    }
+
+    private var controls: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                actionButton("BUY 25%", enabled: cash > price, color: screenGreen) { buy() }
+                actionButton("SELL ALL", enabled: shares > 0, color: red) { sellAll() }
+            }
+            actionButton(isLastDay ? "CASH OUT" : "NEXT DAY ▸", enabled: true, color: amber) {
+                if isLastDay { cashOut() } else { day += 1 }
+            }
+        }
+    }
+
+    private func actionButton(_ label: String, enabled: Bool, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label).font(.system(.subheadline, design: .monospaced).weight(.bold))
+                .foregroundColor(enabled ? Color(red: 0.06, green: 0.08, blue: 0.09) : dim)
+                .frame(maxWidth: .infinity, minHeight: 46)
+                .background(enabled ? color : Color.white.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .disabled(!enabled)
+    }
+
+    private var resultPanel: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(profit >= 0 ? "YOU FINISHED UP" : "YOU FINISHED DOWN")
+                .font(.system(.caption2, design: .monospaced).weight(.bold))
+                .foregroundColor(profit >= 0 ? screenGreen : red)
+            Text("\(profit >= 0 ? "+" : "")$" + String(format: "%.0f", profit) + " on your $" + String(format: "%.0f", TradingContent.startingCash) + " practice fund")
+                .font(.system(.subheadline, design: .monospaced)).foregroundColor(cream)
+            if rewardGiven > 0 {
+                Text("Cashed \(CurrencyFormat.short(rewardGiven)) of profit into your wallet.")
+                    .font(.system(.caption, design: .monospaced)).foregroundColor(amber)
+            } else {
+                Text("No profit to bank this time — the practice is free. Try again?")
+                    .font(.system(.caption, design: .monospaced)).foregroundColor(dim)
+            }
+            actionButton("TRADE AGAIN", enabled: true, color: amber) { reset() }
+        }
+        .padding(12)
+        .background(screenGreen.opacity(profit >= 0 ? 0.10 : 0))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private func buy() {
+        let spend = cash * 0.25
+        guard spend >= price * 0.0001 else { return }
+        shares += spend / price
+        cash -= spend
+    }
+
+    private func sellAll() {
+        cash += shares * price
+        shares = 0
+    }
+
+    private func cashOut() {
+        sellAll()
+        cashedOut = true
+        // Bank the profit once per scenario — practice paying off in real cash.
+        let key = "trade_\(scenario.id)"
+        if profit > 0, !gameState.completedChallenges.contains(key) {
+            gameState.cash += profit
+            gameState.completedChallenges.insert(key)
+            rewardGiven = profit
             PersistenceController.save(gameState)
         }
+    }
+
+    private func reset() {
+        day = 0; cash = TradingContent.startingCash; shares = 0; cashedOut = false; rewardGiven = 0
     }
 }
