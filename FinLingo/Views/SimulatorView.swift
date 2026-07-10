@@ -46,10 +46,13 @@ enum TradingContent {
     ]
 }
 
+private enum SimTool { case trading, retirement }
+
 struct SimulatorView: View {
     @ObservedObject var gameState: GameState
     var onClose: () -> Void
 
+    @State private var tool: SimTool?
     @State private var selected: TradeScenario?
 
     private let screen = Color(red: 0.055, green: 0.075, blue: 0.09)
@@ -66,10 +69,17 @@ struct SimulatorView: View {
             VStack(spacing: 0) {
                 titleBar
                 Rectangle().fill(edge.opacity(0.35)).frame(height: 1)
-                if let scenario = selected {
-                    TradingSandbox(scenario: scenario, gameState: gameState) { selected = nil }
-                } else {
-                    scenarioList
+                switch tool {
+                case .none:
+                    toolHub
+                case .trading:
+                    if let scenario = selected {
+                        TradingSandbox(scenario: scenario, gameState: gameState) { selected = nil }
+                    } else {
+                        scenarioList
+                    }
+                case .retirement:
+                    RetirementCalculator(gameState: gameState) { tool = nil }
                 }
                 Rectangle().fill(edge.opacity(0.35)).frame(height: 1)
                 footer
@@ -96,11 +106,44 @@ struct SimulatorView: View {
         .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
     }
 
+    // The hub: pick a hands-on tool. Each pairs with a lesson topic.
+    private var toolHub: some View {
+        ScrollView {
+            LazyVStack(spacing: 10) {
+                Text("> hands-on tools — practice what the Lessons teach")
+                    .font(.system(.caption, design: .monospaced)).foregroundColor(term.opacity(0.9))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                toolCard("Trading sandbox", "Buy & sell real market history. Pairs with: investing.") { tool = .trading }
+                toolCard("401(k) calculator", "See your nest egg grow. Pairs with: compound interest.") { tool = .retirement }
+            }
+            .padding(16)
+        }
+        .frame(maxHeight: 440)
+    }
+
+    private func toolCard(_ title: String, _ blurb: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(.system(.headline, design: .monospaced)).foregroundColor(cream)
+                Text(blurb).font(.system(.caption, design: .monospaced)).foregroundColor(dim)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white.opacity(0.035))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.06), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
     private var scenarioList: some View {
         ScrollView {
             LazyVStack(spacing: 10) {
-                Text("> practice trading real market history").font(.system(.caption, design: .monospaced))
-                    .foregroundColor(term.opacity(0.9)).frame(maxWidth: .infinity, alignment: .leading)
+                Button { tool = nil } label: {
+                    Text("‹ TOOLS").font(.system(.caption, design: .monospaced).weight(.bold)).foregroundColor(dim)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.plain)
                 ForEach(TradingContent.scenarios) { scenario in
                     Button { selected = scenario } label: { scenarioRow(scenario) }.buttonStyle(.plain)
                 }
@@ -293,5 +336,89 @@ private struct TradingSandbox: View {
 
     private func reset() {
         day = 0; cash = TradingContent.startingCash; shares = 0; cashedOut = false; rewardGiven = 0
+    }
+}
+
+// The hands-on companion to the compound-interest lesson: project a 401(k) and see how
+// much of the final number is the employer match and pure growth rather than your own money.
+private struct RetirementCalculator: View {
+    @ObservedObject var gameState: GameState
+    var onBack: () -> Void
+
+    @State private var contribPct = 0.06   // your contribution, fraction of salary
+    @State private var years = 30.0
+
+    private let employerMatchCap = 0.03     // employer matches dollar-for-dollar up to 3%
+    private let annualReturn = 0.07
+
+    private let cream = Color(red: 0.96, green: 0.90, blue: 0.70)
+    private let amber = Color(red: 0.93, green: 0.70, blue: 0.32)
+    private let term = Color(red: 0.55, green: 0.80, blue: 0.52)
+    private var dim: Color { cream.opacity(0.45) }
+
+    private var salary: Double { gameState.monthlyIncome > 0 ? gameState.monthlyIncome * 12 : 60_000 }
+    private var employerPct: Double { min(contribPct, employerMatchCap) }
+
+    private var projection: (balance: Double, you: Double, employer: Double, growth: Double) {
+        let r = annualReturn / 12
+        let n = years * 12
+        let annual = salary * (contribPct + employerPct)
+        let pmt = annual / 12
+        let balance = r == 0 ? pmt * n : pmt * ((pow(1 + r, n) - 1) / r)
+        let you = salary * contribPct * years
+        let employer = salary * employerPct * years
+        return (balance, you, employer, max(0, balance - you - employer))
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Button { onBack() } label: {
+                    Text("‹ TOOLS").font(.system(.caption, design: .monospaced).weight(.bold)).foregroundColor(dim)
+                }
+                Text("401(k) projection").font(.system(.title3, design: .monospaced).weight(.bold)).foregroundColor(cream)
+                Text("Salary $\(Int(salary))/yr · \(Int(annualReturn * 100))% return · employer matches to \(Int(employerMatchCap * 100))%")
+                    .font(.system(.caption, design: .monospaced)).foregroundColor(dim)
+
+                slider(label: "You contribute", value: $contribPct, range: 0...0.15, step: 0.01, display: "\(Int(contribPct * 100))% of salary")
+                slider(label: "Years invested", value: $years, range: 5...40, step: 1, display: "\(Int(years)) years")
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("PROJECTED AT RETIREMENT").font(.system(.caption2, design: .monospaced).weight(.bold)).foregroundColor(term)
+                    Text(CurrencyFormat.short(projection.balance))
+                        .font(.system(size: 34, weight: .heavy, design: .monospaced)).foregroundColor(amber).monospacedDigit()
+                }
+
+                breakdown("You put in", projection.you, cream)
+                breakdown("Employer match (free money)", projection.employer, term)
+                breakdown("Investment growth", projection.growth, term)
+
+                Text(employerPct < employerMatchCap
+                     ? "You're leaving free money on the table — contribute at least \(Int(employerMatchCap * 100))% to grab the full match."
+                     : "Nice — you're capturing the full employer match, then compounding does the heavy lifting.")
+                    .font(.system(.caption, design: .monospaced)).foregroundColor(dim).lineSpacing(2)
+            }
+            .padding(16)
+        }
+        .frame(maxHeight: 500)
+    }
+
+    private func slider(label: String, value: Binding<Double>, range: ClosedRange<Double>, step: Double, display: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(label).font(.system(.caption, design: .monospaced)).foregroundColor(cream)
+                Spacer()
+                Text(display).font(.system(.caption, design: .monospaced).weight(.bold)).foregroundColor(amber)
+            }
+            Slider(value: value, in: range, step: step).tint(amber)
+        }
+    }
+
+    private func breakdown(_ label: String, _ amount: Double, _ color: Color) -> some View {
+        HStack {
+            Text(label).font(.system(.caption, design: .monospaced)).foregroundColor(dim)
+            Spacer()
+            Text(CurrencyFormat.short(amount)).font(.system(.subheadline, design: .monospaced).weight(.bold)).foregroundColor(color).monospacedDigit()
+        }
     }
 }

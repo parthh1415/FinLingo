@@ -18,6 +18,7 @@ struct Lesson: Identifiable {
     let options: [String]
     let correctIndex: Int
     let reward: Double
+    var practiceHint: String? = nil // points to the matching Simulator tool
 }
 
 enum LessonContent {
@@ -50,7 +51,8 @@ enum LessonContent {
             question: "$1,000 growing ~8%/yr roughly doubles in ~9 years to about:",
             options: ["$1,080", "$2,000", "$10,000"],
             correctIndex: 1,
-            reward: 100
+            reward: 100,
+            practiceHint: "↳ Practice this: Simulator › 401(k) calculator"
         ),
         Lesson(
             id: "credit_utilization",
@@ -227,6 +229,10 @@ private struct LessonDetail: View {
                 Text(lesson.topic).font(.system(.caption2, design: .monospaced).weight(.bold)).foregroundColor(palette.term)
                 Text(lesson.title).font(.system(.title3, design: .monospaced).weight(.bold)).foregroundColor(palette.cream)
                 Text(lesson.teach).font(.system(.subheadline, design: .monospaced)).foregroundColor(palette.cream.opacity(0.85)).lineSpacing(3)
+
+                if let hint = lesson.practiceHint {
+                    Text(hint).font(.system(.caption, design: .monospaced)).foregroundColor(palette.term)
+                }
 
                 Text(lesson.question).font(.system(.subheadline, design: .monospaced).weight(.bold)).foregroundColor(palette.amber).padding(.top, 4)
 
