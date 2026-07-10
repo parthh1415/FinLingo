@@ -1,0 +1,135 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{hyperref}
+
+\definecolor{finteal}{RGB}{45,110,90}
+\titleformat{\section}{\large\bfseries\color{finteal}}{}{0em}{}
+\titlespacing{\section}{0pt}{1.2em}{0.4em}
+\setlist[itemize]{leftmargin=1.4em, itemsep=2pt, topsep=2pt}
+\hypersetup{colorlinks=true, urlcolor=finteal}
+
+\title{\vspace{-1.5em}\textbf{FinLingo}\\[-0.2em]{\large\normalfont a financial-literacy simulator}}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+\section*{Inspiration}
+Most young women start their careers having never been taught how money actually
+works---budgeting, investing, debt, and negotiating a first salary. The tools that
+exist tend to fall into two camps: financial-literacy apps that feel like dry quizzes,
+and games that are fun but teach nothing real. We wanted to fuse them into something
+genuinely addictive. FinLingo is a cozy, pixel-art life simulator built for
+early-career women to \emph{build money confidence}---where every tap is a real
+financial decision and your net worth is the score. Think Duolingo's bite-sized
+loop meets an idle life-sim, set in a dorm room where learning literally pays.
+
+\section*{What it does}
+FinLingo is a native iOS game. You begin by creating a profile---name, age, income,
+monthly spending, existing debt, and goals---and \emph{every calculation in the game is
+personalized to it}. From your dorm room, two laptops drive the experience:
+\begin{itemize}
+  \item \textbf{Learn (left laptop).} Bite-sized lessons on budgeting (50/30/20),
+  emergency funds, compound interest, credit, high-yield savings, salary negotiation,
+  and 529 college savings. Each lesson mixes three interactive formats---multiple
+  choice, drag-to-sort, and tap-to-match---and every correct answer pays real in-game
+  cash (once, so it can't be farmed). A ``Practice this'' link jumps straight to the
+  matching hands-on tool.
+  \item \textbf{Simulate (right laptop).} A \emph{running, month-by-month life
+  simulation}: net worth sits on the HUD, the clock ticks a month every few seconds,
+  and a live sparkline tracks your trajectory. A real cash-flow model moves money each
+  month---income in, an investment allocation that compounds, spending out, and debt
+  that accrues interest. \textbf{Life-event scenarios} interrupt with real decisions
+  (your car breaks down, a surprise bonus lands, a medical bill, a 401(k) match) whose
+  choices bend the curve. Hands-on tools include a trading sandbox on \emph{real market
+  history}, 401(k) and 529 projections, a debt-payoff planner, an emergency-fund
+  calculator, and a ``Future You'' projection.
+\end{itemize}
+Along the way you can adopt a pet cat that follows you around and deck out your dorm---so
+the reward loop of an idle game reinforces the financial one.
+
+\section*{How we built it}
+\begin{itemize}
+  \item \textbf{Native iOS in Swift.} SwiftUI for the interface, SpriteKit for the
+  explorable dorm world, and Combine to drive the simulation clock.
+  \item \textbf{100\% code-drawn pixel art.} There are no image assets---the player
+  sprite, the pet cat, the dorm, and the title-screen ``Freshman Year'' crest are all
+  generated procedurally with Core Graphics and SwiftUI \texttt{Canvas}, so everything
+  scales crisply with nearest-neighbor rendering.
+  \item \textbf{The simulation engine.} A Combine timer advances one month at a time,
+  applying a cash-flow model: income $\rightarrow$ investment allocation (compounding at
+  a 7\% annual return) $\rightarrow$ spending $\rightarrow$ carried debt (compounding at
+  $\sim$18\% APR), with any shortfall rolling into debt.
+  \item \textbf{Real financial data.} The trading sandbox replays actual market history
+  (e.g.\ AAPL, NVDA) sourced via Alpha Vantage.
+  \item \textbf{Durable state.} Progress persists as Codable JSON with NaN-safe encoding
+  and a corrupt-save quarantine so a bad file can never silently wipe a player.
+  \item \textbf{Synthesized audio} for the UI clicks and a calm ambient loop---no
+  licensed assets.
+  \item \textbf{AI-assisted QA.} We ran repeated systematic-debugging sweeps with
+  parallel review agents auditing the money math, persistence, UI, and scene layers.
+\end{itemize}
+
+\section*{Challenges we ran into}
+\begin{itemize}
+  \item Turning the Simulator from a set of static calculators into a genuine
+  \emph{running} simulation---net-worth HUD, ticking clock, pause/speed controls, a live
+  curve, and steerable life events---without it feeling like a spreadsheet.
+  \item Drawing rich pixel art entirely in code: every sprite and the title diorama is
+  hand-plotted rectangles, coins, and light cones.
+  \item Data-loss bugs: manual \texttt{Codable} conformance silently wiped saves when a
+  field was missing from the encoder/decoder, and unbounded compounding could push a
+  \texttt{NaN}/\texttt{Inf} into the persisted net-worth history.
+  \item Sequencing a clean first run (title $\rightarrow$ profile $\rightarrow$ tutorial
+  $\rightarrow$ first scenario) and \emph{freezing the world} behind modals and the coach
+  tour so time wouldn't advance out of sight.
+  \item Financial correctness: money conservation, compounding order, debt amortization,
+  and divide-by-zero guards across every calculator.
+\end{itemize}
+
+\section*{Accomplishments that we're proud of}
+\begin{itemize}
+  \item A genuinely running, month-by-month life simulation with net worth as the score
+  and life events that change the outcome.
+  \item Every pixel of art is generated in code---zero external image files.
+  \item Real stock-market data powering a risk-free trading sandbox.
+  \item Six-plus lessons across three interactive formats with abuse-proof, once-ever
+  scoring, each linked to a hands-on practice tool.
+  \item A cohesive, presentable first-run flow and a polished, game-style home screen.
+  \item Rigor: parallel-agent debugging verified Codable symmetry, financial math, and
+  crash safety end to end.
+\end{itemize}
+
+\section*{What we learned}
+\begin{itemize}
+  \item How to integrate SwiftUI and SpriteKit and drive a simulation loop with Combine.
+  \item Real financial modeling---annuity future value, compound interest, the Rule of
+  72, and debt amortization---translated into code a player can \emph{feel}.
+  \item The sharp edges of hand-written \texttt{Codable} conformance and floating-point
+  safety in persisted data.
+  \item Procedural pixel-art techniques for characters, scenes, and UI.
+  \item Designing for a specific audience: clarity, encouragement, and relevance beat
+  jargon every time.
+\end{itemize}
+
+\section*{What's next for FinLingo}
+\begin{itemize}
+  \item \textbf{More levels beyond Freshman Year}---sophomore year, a first job and
+  salary negotiation, moving out, buying a home, and long-term retirement.
+  \item \textbf{A room-decoration economy}: spend earned cash on posters, plants, and
+  lights, plus richer pet interactions, so the idle loop deepens.
+  \item \textbf{Community}: leaderboards, shareable net-worth cards, and ``\% of people
+  your age got this right'' insights.
+  \item \textbf{More content and personalization}: additional life events and lessons,
+  plus AI-generated lesson plans tailored to each player's goals.
+  \item \textbf{New modes}: a daily money puzzle and a card-based ``Money Run'' roguelike
+  for replayable, addictive learning.
+  \item \textbf{Backend and cloud save} to power real social features across devices.
+\end{itemize}
+
+\end{document}
