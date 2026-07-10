@@ -110,6 +110,14 @@ final class SimulationEngine: ObservableObject {
 
     // MARK: - Events
 
+    /// Fire the very first real-life scenario right after the tutorial, so the game flows
+    /// straight from the tour into a hands-on decision instead of an idle wait.
+    func beginFirstScenario() {
+        guard pendingEvent == nil else { return }
+        let starter = LifeEventCatalog.all.first { !usedEventIds.contains($0.id) } ?? LifeEventCatalog.all.first
+        pendingEvent = starter
+    }
+
     private func maybeTriggerEvent() {
         guard monthIndex > 0, monthIndex % eventEveryMonths == 0 else { return }
         var available = LifeEventCatalog.all.filter { !usedEventIds.contains($0.id) }

@@ -83,8 +83,8 @@ struct TutorialOverlay: View {
                 target: UnitPoint(x: 0.84, y: 0.93), facing: "right"
             ),
             TutorialStep(
-                title: "YOU'RE ALL SET",
-                body: "That's the grand tour! Explore, tap around, and start building your money life. Have fun — now go make some money! 💸",
+                title: "④ REAL LIFE",
+                body: "That's the tour! Now life happens — money decisions pop up as time passes, starting right now. Handle them well and watch your net worth climb. Ready for your first one? 💸",
                 target: nil, facing: "down"
             ),
         ]

@@ -63,6 +63,7 @@ struct GameView: View {
     private var gameCovered: Bool {
         ui.showLessons || ui.showSimulator || ui.showCareer
             || ui.showBudget || ui.showMarketplace || ui.welcomeBackAmount >= 1
+            || sim.pendingEvent != nil                                  // a life-scenario decision freezes the room
             || (gameState.hasOnboarded && !gameState.hasSeenTutorial)   // the coach tour freezes the world too
     }
 
@@ -134,16 +135,20 @@ struct GameView: View {
                 LifeEventView(event: event) { sim.resolve($0) }
             }
 
-            // One-time coach tour for brand-new players — sits on top of everything.
+            // One-time coach tour for brand-new players — sits on top of everything, and hands
+            // straight off to the first real-life scenario when it finishes.
             if gameState.hasOnboarded && !gameState.hasSeenTutorial {
                 TutorialOverlay(playerName: gameState.playerName) {
                     gameState.hasSeenTutorial = true
                     PersistenceController.save(gameState)
+                    sim.beginFirstScenario()
                 }
             }
         }
         .onAppear { creditOfflineEarnings(); sim.start() }
-        .onChange(of: gameCovered) { _, covered in
+        // `initial: true` so the very first render (e.g. the coach tour, which starts covered)
+        // freezes the world too — onChange alone skips the initial value.
+        .onChange(of: gameCovered, initial: true) { _, covered in
             sim.isSuspended = covered
             scene.isPaused = covered   // freeze movement/economy too, so she can't wander behind a panel
         }
