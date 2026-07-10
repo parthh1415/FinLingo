@@ -105,7 +105,9 @@ struct GameView: View {
                         .frame(width: geo.size.width, height: bottomH)
                 }
             }
-            .ignoresSafeArea()
+            // NOTE: the content deliberately respects the safe area so the top HUD sits below the
+            // camera/Dynamic Island and the bottom HUD clears the home indicator; only the dark
+            // background above bleeds edge-to-edge.
 
             // Overlays
             if ui.showLessons {
