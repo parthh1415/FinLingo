@@ -13,7 +13,8 @@ import Combine
 
 final class SimulationEngine: ObservableObject {
     @Published private(set) var monthIndex: Int
-    @Published var isRunning: Bool = true
+    @Published var isRunning: Bool = true          // the player's manual play/pause
+    @Published var isSuspended: Bool = false       // held automatically while a panel/modal covers the game
     @Published var speed: Int = 1                 // 1× or 2×
     @Published var pendingEvent: LifeEvent?
 
@@ -45,7 +46,9 @@ final class SimulationEngine: ObservableObject {
     func start() {
         guard cancellable == nil else { return }
         // Seed one history point so the curve isn't empty at month 0.
-        if gameState.netWorthHistory.isEmpty { gameState.netWorthHistory = [gameState.netWorth] }
+        if gameState.netWorthHistory.isEmpty {
+            gameState.netWorthHistory = [gameState.netWorth.isFinite ? gameState.netWorth : 0]
+        }
         cancellable = Timer.publish(every: tickInterval, on: .main, in: .common).autoconnect()
             .sink { [weak self] _ in self?.tick() }
     }
@@ -56,7 +59,9 @@ final class SimulationEngine: ObservableObject {
     func cycleSpeed() { speed = speed == 1 ? 2 : 1 }
 
     private func tick() {
-        guard isRunning, pendingEvent == nil else { return }
+        // Don't advance the clock while paused, while a decision is pending, or while the
+        // player is inside a panel/modal that hides the game.
+        guard isRunning, !isSuspended, pendingEvent == nil else { return }
         accumulator += tickInterval * Double(speed)
         while accumulator >= secondsPerMonth {
             accumulator -= secondsPerMonth
@@ -95,6 +100,8 @@ final class SimulationEngine: ObservableObject {
     }
 
     private func recordNetWorth() {
+        // A non-finite sample would poison the persisted curve forever; skip it if math ever runs away.
+        guard gameState.netWorth.isFinite else { return }
         gameState.netWorthHistory.append(gameState.netWorth)
         if gameState.netWorthHistory.count > maxHistory {
             gameState.netWorthHistory.removeFirst(gameState.netWorthHistory.count - maxHistory)

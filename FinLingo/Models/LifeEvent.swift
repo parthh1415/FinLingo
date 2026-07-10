@@ -58,7 +58,7 @@ enum LifeEventCatalog {
         LifeEvent(id: "crypto", emoji: "🪙", title: "A 'can't-miss' crypto tip",
                   detail: "A friend swears this coin will 10×. They want you all in for $1,000.",
                   choices: [
-                    .init(label: "Go all in", outcome: "It tanked 60%. Hype is not a strategy.", invested: -600),
+                    .init(label: "Go all in", outcome: "It tanked 60%. Hype is not a strategy.", cash: -600),
                     .init(label: "Pass, keep investing steadily", outcome: "Boring beats broke. Steady index investing wins over time.", invested: 100),
                   ]),
         LifeEvent(id: "medical", emoji: "🩺", title: "Surprise medical bill",

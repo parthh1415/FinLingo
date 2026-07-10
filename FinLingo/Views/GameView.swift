@@ -56,6 +56,13 @@ struct GameView: View {
 
     private let simBarHeight: CGFloat = 54
 
+    /// True whenever a full-screen panel or popup is hiding the game — the life sim holds
+    /// still so months don't tick (and events don't fire) behind the player's back.
+    private var gameCovered: Bool {
+        ui.showLessons || ui.showSimulator || ui.showCareer
+            || ui.showBudget || ui.showMarketplace || ui.welcomeBackAmount >= 1
+    }
+
     var body: some View {
         ZStack {
             Color(PixelArtStyle.Palette.darkOutside).ignoresSafeArea()
@@ -120,6 +127,7 @@ struct GameView: View {
             }
         }
         .onAppear { creditOfflineEarnings(); sim.start() }
+        .onChange(of: gameCovered) { _, covered in sim.isSuspended = covered }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:

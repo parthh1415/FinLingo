@@ -123,6 +123,18 @@ final class GameState: ObservableObject, Codable {
         ownedGear.values.contains { $0 > 0 }
     }
 
+    /// Scrub any non-finite money values that a corrupt/legacy save could carry in, so a single
+    /// poisoned number can't propagate into net worth, the curve, or the next save.
+    func sanitize() {
+        if !cash.isFinite { cash = 0 }
+        if !investedBalance.isFinite { investedBalance = 0 }
+        if !debt.isFinite { debt = 0 }
+        if !monthlyIncome.isFinite { monthlyIncome = 0 }
+        if !monthlySpending.isFinite { monthlySpending = 0 }
+        if !investAllocation.isFinite { investAllocation = 0 }
+        netWorthHistory = netWorthHistory.filter { $0.isFinite }
+    }
+
     // MARK: - Codable
 
     private enum CodingKeys: String, CodingKey {
