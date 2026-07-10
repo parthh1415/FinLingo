@@ -391,28 +391,62 @@ enum PixelArtStyle {
 
     private static func drawPlayer(in context: CGContext, size: CGSize, name: String) {
         fill(context, CGRect(origin: .zero, size: size), UIColor.clear)
-        let walkOffset: CGFloat = name.contains("walk_02") ? -1 : name.contains("walk_03") ? 1 : 0
-        let shirt = UIColor(hex: "#6A5970")
-        let pants = UIColor(hex: "#2D3444")
-        let skin = UIColor(hex: "#B98258")
-        rect(context, x: 6, y: 2 + walkOffset, w: 8, h: 7, skin)
-        rect(context, x: 4, y: 8 + walkOffset, w: 12, h: 10, shirt)
-        rect(context, x: 5, y: 18 + walkOffset, w: 4, h: 7, pants)
-        rect(context, x: 11, y: 18 - walkOffset, w: 4, h: 7, pants)
-        rect(context, x: 3, y: 10 + walkOffset, w: 3, h: 7, skin)
-        rect(context, x: 14, y: 10 - walkOffset, w: 3, h: 7, skin)
+        // Only the limbs bob as she walks; the dress and hair hold still so the silhouette reads clean.
+        let step: CGFloat = name.contains("walk_02") ? -1 : name.contains("walk_03") ? 1 : 0
+
+        let dress = UIColor(hex: "#D46A8E")       // rosy dress — clearly feminine even at 18×26
+        let dressDark = UIColor(hex: "#B24F72")
+        let skin = UIColor(hex: "#C28A5E")
+        let hair = UIColor(hex: "#4A2E28")        // long brown hair
+        let hairDark = UIColor(hex: "#33201C")
+
+        // Bare legs and little shoes peeking out below the skirt.
+        rect(context, x: 6, y: 21 + step, w: 3, h: 4, skin)
+        rect(context, x: 9, y: 21 - step, w: 3, h: 4, skin)
+        rect(context, x: 6, y: 24 + step, w: 3, h: 1, hairDark)
+        rect(context, x: 9, y: 24 - step, w: 3, h: 1, hairDark)
+
+        // Flared skirt: a triangle that's widest at the hem — the giveaway shape.
+        rect(context, x: 3, y: 17, w: 12, h: 4, dress)
+        rect(context, x: 4, y: 14, w: 10, h: 3, dress)
+        rect(context, x: 4, y: 20, w: 10, h: 1, dressDark)
+
+        // Fitted bodice with a waist line.
+        rect(context, x: 5, y: 8, w: 8, h: 7, dress)
+        rect(context, x: 5, y: 13, w: 8, h: 1, dressDark)
+
+        // Slim arms.
+        rect(context, x: 3, y: 9 + step, w: 2, h: 6, skin)
+        rect(context, x: 13, y: 9 - step, w: 2, h: 6, skin)
+
+        // Head.
+        rect(context, x: 6, y: 2, w: 7, h: 7, skin)
+
+        // Direction-specific hair (always long past the shoulders) and face.
         if name.contains("up") {
-            rect(context, x: 5, y: 2 + walkOffset, w: 10, h: 4, UIColor(hex: "#3B2A28"))
+            // Facing away: all hair, a curtain flowing down her back.
+            rect(context, x: 5, y: 1, w: 9, h: 9, hair)
+            rect(context, x: 5, y: 9, w: 9, h: 8, hair)
+            rect(context, x: 8, y: 3, w: 2, h: 12, hairDark)   // center parting
         } else if name.contains("left") {
-            rect(context, x: 5, y: 4 + walkOffset, w: 2, h: 2, Palette.darkOutline)
-            rect(context, x: 4, y: 2 + walkOffset, w: 7, h: 3, UIColor(hex: "#3B2A28"))
+            rect(context, x: 6, y: 1, w: 8, h: 4, hair)        // crown
+            rect(context, x: 12, y: 3, w: 3, h: 13, hair)      // long hair trailing behind
+            rect(context, x: 5, y: 3, w: 3, h: 3, hair)        // front fringe
+            rect(context, x: 6, y: 5, w: 1, h: 2, hairDark)    // eye
         } else if name.contains("right") {
-            rect(context, x: 13, y: 4 + walkOffset, w: 2, h: 2, Palette.darkOutline)
-            rect(context, x: 9, y: 2 + walkOffset, w: 7, h: 3, UIColor(hex: "#3B2A28"))
+            rect(context, x: 5, y: 1, w: 8, h: 4, hair)
+            rect(context, x: 4, y: 3, w: 3, h: 13, hair)       // long hair trailing behind
+            rect(context, x: 11, y: 3, w: 3, h: 3, hair)       // front fringe
+            rect(context, x: 12, y: 5, w: 1, h: 2, hairDark)   // eye
         } else {
-            rect(context, x: 6, y: 5 + walkOffset, w: 2, h: 2, Palette.darkOutline)
-            rect(context, x: 12, y: 5 + walkOffset, w: 2, h: 2, Palette.darkOutline)
-            rect(context, x: 5, y: 2 + walkOffset, w: 10, h: 3, UIColor(hex: "#3B2A28"))
+            // Facing the camera: bangs up top, two long locks framing her face.
+            rect(context, x: 5, y: 1, w: 9, h: 3, hair)        // top
+            rect(context, x: 4, y: 3, w: 2, h: 13, hair)       // left lock
+            rect(context, x: 13, y: 3, w: 2, h: 13, hair)      // right lock
+            rect(context, x: 6, y: 2, w: 7, h: 2, hair)        // fringe
+            rect(context, x: 7, y: 5, w: 1, h: 2, hairDark)    // left eye
+            rect(context, x: 11, y: 5, w: 1, h: 2, hairDark)   // right eye
+            rect(context, x: 9, y: 7, w: 1, h: 1, dressDark)   // hint of a smile
         }
     }
 
