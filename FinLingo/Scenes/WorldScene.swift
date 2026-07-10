@@ -5,6 +5,7 @@ import SpriteKit
 final class WorldScene: SKScene {
     private enum Constants {
         static let movementSpeed: CGFloat = 75
+        static let petSpeed: CGFloat = 66        // a hair slower than the player, so the cat lags
         static let targetStoppingDistance: CGFloat = 4
         static let entryLocalY: CGFloat = 120   // open floor in the lower (door-side) region; clear of furniture and the door re-trigger zone
     }
@@ -20,6 +21,7 @@ final class WorldScene: SKScene {
     private let cameraNode = SKCameraNode()
     private var cameraController: CameraController!
     private let player = PlayerNode()
+    private var catNode: CatNode?
     private var stageNodes: [StageNode] = []
     private var currentIndex = 0
     private var movementTarget: CGPoint?
@@ -95,7 +97,35 @@ final class WorldScene: SKScene {
         }
 
         updatePlayerMovement(deltaTime: CGFloat(dt))
+        updatePet(deltaTime: CGFloat(dt))
         checkDoorTransition()
+    }
+
+    // MARK: - Pet
+
+    private func updatePet(deltaTime: CGFloat) {
+        // Spawn the cat the first time the player owns one (including right after buying it).
+        if gameState.hasPet, catNode == nil {
+            let cat = CatNode()
+            cat.position = CGPoint(x: player.position.x - 16, y: player.position.y - 10)
+            addChild(cat)
+            catNode = cat
+        }
+        guard let cat = catNode else { return }
+
+        // Loose, laggy follow: hold a small gap and trail a touch slower than the player, so the
+        // cat curves after her instead of tracking exactly.
+        let gap: CGFloat = 18
+        let dx = player.position.x - cat.position.x
+        let dy = player.position.y - cat.position.y
+        let distance = hypot(dx, dy)
+        guard distance > gap else { return }
+
+        let step = min(Constants.petSpeed * deltaTime, distance - gap)
+        cat.position = CGPoint(x: cat.position.x + dx / distance * step,
+                               y: cat.position.y + dy / distance * step)
+        cat.face(dx: dx)
+        cat.zPosition = PixelArtStyle.Layer.player - 1
     }
 
     // MARK: - Input
@@ -184,6 +214,7 @@ final class WorldScene: SKScene {
         cameraController.glide(toStageIndex: index, duration: 0.6)
         player.position = PixelArtStyle.pixelSnap(spawnScenePoint(forStage: index, local: CGPoint(x: DormRoomLayout.sceneSize.width / 2, y: Constants.entryLocalY)))
         player.updateAnimation(direction: .down, moving: false)
+        catNode?.position = CGPoint(x: player.position.x - 16, y: player.position.y - 10)
         run(.sequence([.wait(forDuration: 0.65), .run { [weak self] in self?.transitioning = false }]))
     }
 

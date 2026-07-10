@@ -169,6 +169,8 @@ enum PixelArtStyle {
                 drawLaptop(in: context, size: canvas, screen: Palette.laptopDark, frameIndex: frameIndex(name))
             case "coffee_steam_01", "coffee_steam_02", "coffee_steam_03":
                 drawSteam(in: context, size: canvas, frameIndex: frameIndex(name))
+            case "pet_cat":
+                drawCat(in: context, size: canvas)
             case "player_down_idle", "player_down_walk_01", "player_down_walk_02", "player_down_walk_03",
                 "player_up_idle", "player_up_walk_01", "player_up_walk_02", "player_up_walk_03",
                 "player_left_idle", "player_left_walk_01", "player_left_walk_02", "player_left_walk_03",
@@ -448,6 +450,47 @@ enum PixelArtStyle {
             rect(context, x: 11, y: 5, w: 1, h: 2, hairDark)   // right eye
             rect(context, x: 9, y: 7, w: 1, h: 1, dressDark)   // hint of a smile
         }
+    }
+
+    /// A little orange tabby, drawn front-on so it reads as a cat at 16×14. Tail sits on the
+    /// right so a horizontal flip (see CatNode) gives it a touch of life when it turns.
+    private static func drawCat(in context: CGContext, size: CGSize) {
+        fill(context, CGRect(origin: .zero, size: size), UIColor.clear)
+        let orange = UIColor(hex: "#E8974A")
+        let orangeDk = UIColor(hex: "#C9762E")
+        let pink = UIColor(hex: "#E9A6B0")
+        let eye = UIColor(hex: "#2A2320")
+        let cream = UIColor(hex: "#F8F1DC")
+
+        // Tail curling up the right side (drawn first so the body overlaps its base).
+        rect(context, x: 12, y: 8, w: 3, h: 2, orange)
+        rect(context, x: 13, y: 4, w: 2, h: 4, orange)
+        rect(context, x: 13, y: 3, w: 2, h: 1, orangeDk)
+
+        // Ears.
+        rect(context, x: 3, y: 0, w: 3, h: 3, orangeDk)
+        rect(context, x: 4, y: 1, w: 1, h: 1, pink)
+        rect(context, x: 10, y: 0, w: 3, h: 3, orangeDk)
+        rect(context, x: 11, y: 1, w: 1, h: 1, pink)
+
+        // Head with a little tabby "M" and eyes.
+        rect(context, x: 3, y: 2, w: 10, h: 6, orange)
+        rect(context, x: 6, y: 2, w: 1, h: 3, orangeDk)
+        rect(context, x: 9, y: 2, w: 1, h: 3, orangeDk)
+        rect(context, x: 5, y: 4, w: 2, h: 2, eye)
+        rect(context, x: 9, y: 4, w: 2, h: 2, eye)
+        rect(context, x: 6, y: 6, w: 4, h: 2, cream)   // muzzle
+        rect(context, x: 7, y: 6, w: 2, h: 1, pink)    // nose
+
+        // Body with a cream belly and side stripes.
+        rect(context, x: 4, y: 8, w: 8, h: 5, orange)
+        rect(context, x: 6, y: 9, w: 4, h: 4, cream)
+        rect(context, x: 4, y: 9, w: 1, h: 3, orangeDk)
+        rect(context, x: 11, y: 9, w: 1, h: 3, orangeDk)
+
+        // Front paws.
+        rect(context, x: 5, y: 12, w: 2, h: 1, cream)
+        rect(context, x: 9, y: 12, w: 2, h: 1, cream)
     }
 
     private static func frameIndex(_ name: String) -> Int {

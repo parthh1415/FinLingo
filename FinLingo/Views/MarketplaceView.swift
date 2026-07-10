@@ -28,7 +28,10 @@ struct MarketplaceView: View {
     /// Invoked when the player taps Close or the dimmed scrim.
     var onClose: () -> Void
 
-    // MARK: - Catalog (all "coming soon" for now)
+    /// What the one purchasable item — the pet — costs in cash.
+    private let petCost: Double = 1500
+
+    // MARK: - Catalog (the pet is buyable; everything else is a preview)
 
     private let catalog: [ShopItem] = [
         ShopItem(icon: "🐾", name: "Pet companion", blurb: "Adopt a little buddy to keep you company.", tag: "PET"),
@@ -158,14 +161,18 @@ struct MarketplaceView: View {
 
             Spacer(minLength: 8)
 
-            // No purchase yet — just a disabled "coming soon" pill.
-            Text("COMING\nSOON")
-                .font(.system(.caption2, design: .monospaced).weight(.bold))
-                .multilineTextAlignment(.center)
-                .foregroundColor(dim)
-                .frame(minWidth: 92, minHeight: 44)
-                .background(Color.white.opacity(0.06))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            // The pet can actually be adopted; every other item is still a preview.
+            if item.tag == "PET" {
+                petAction
+            } else {
+                Text("COMING\nSOON")
+                    .font(.system(.caption2, design: .monospaced).weight(.bold))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(dim)
+                    .frame(minWidth: 92, minHeight: 44)
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
         }
         .padding(12)
         .background(Color.white.opacity(0.035))
@@ -174,6 +181,43 @@ struct MarketplaceView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color.white.opacity(0.06), lineWidth: 1)
         )
+    }
+
+    /// The pet's buy button — or an OWNED badge once it's been adopted.
+    @ViewBuilder
+    private var petAction: some View {
+        if gameState.hasPet {
+            Text("OWNED ✓")
+                .font(.system(.caption2, design: .monospaced).weight(.bold))
+                .foregroundColor(term)
+                .frame(minWidth: 92, minHeight: 44)
+                .background(term.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        } else {
+            let affordable = gameState.cash >= petCost
+            Button { buyPet() } label: {
+                VStack(spacing: 1) {
+                    Text("ADOPT")
+                        .font(.system(.caption2, design: .monospaced).weight(.bold))
+                    Text(CurrencyFormat.short(petCost))
+                        .font(.system(.subheadline, design: .monospaced).weight(.bold))
+                        .monospacedDigit()
+                }
+                .frame(minWidth: 92, minHeight: 44)
+                .background(affordable ? amber : Color.white.opacity(0.06))
+                .foregroundColor(affordable ? Color(red: 0.06, green: 0.08, blue: 0.09) : dim)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .disabled(!affordable)
+        }
+    }
+
+    private func buyPet() {
+        guard !gameState.hasPet, gameState.cash >= petCost else { return }
+        Sound.tap()
+        gameState.cash -= petCost
+        gameState.hasPet = true
+        PersistenceController.save(gameState)
     }
 
     private var footer: some View {
