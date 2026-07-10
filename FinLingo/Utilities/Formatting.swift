@@ -5,6 +5,7 @@ import Foundation
 enum CurrencyFormat {
     /// e.g. 950 → "$950", 12_500 → "$12.5K", 3_200_000 → "$3.2M", 4.1e9 → "$4.10B".
     static func short(_ value: Double) -> String {
+        guard value.isFinite else { return "$0" } // never render "$nanQ" if something upstream breaks
         let v = max(value, 0)
         switch v {
         case ..<1_000:                 return "$\(Int(v))"

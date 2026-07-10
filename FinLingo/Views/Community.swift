@@ -17,8 +17,8 @@ enum PeerInsights {
     static func split(forIncome income: Double) -> Split {
         switch income {
         case ..<2500:    return Split(survive: 46, balanced: 40, builder: 14, band: "under $2.5k/mo")
-        case 2500..<4500: return Split(survive: 23, balanced: 55, builder: 22, band: "around $3–4k/mo")
-        case 4500..<7000: return Split(survive: 14, balanced: 49, builder: 37, band: "around $5–6k/mo")
+        case 2500..<4500: return Split(survive: 23, balanced: 55, builder: 22, band: "$2.5–4.5k/mo")
+        case 4500..<7000: return Split(survive: 14, balanced: 49, builder: 37, band: "$4.5–7k/mo")
         default:          return Split(survive: 9,  balanced: 41, builder: 50, band: "$7k+/mo")
         }
     }
@@ -139,9 +139,9 @@ struct ShareProgressView: View {
             Color.black.opacity(0.75).ignoresSafeArea().contentShape(Rectangle()).onTapGesture { onClose() }
 
             VStack(spacing: 16) {
-                ShareCard(gameState: gameState).frame(width: 320, height: 400)
-
                 if let shareImage {
+                    // Show the exact rendered image so the preview always matches what gets posted.
+                    shareImage.resizable().scaledToFit().frame(maxWidth: 320, maxHeight: 400)
                     ShareLink(item: shareImage, preview: SharePreview("My FinLingo net worth", image: shareImage)) {
                         Label("Post my progress", systemImage: "square.and.arrow.up")
                             .font(.system(.subheadline, design: .monospaced).weight(.bold))
@@ -151,6 +151,7 @@ struct ShareProgressView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
                 } else {
+                    ShareCard(gameState: gameState).frame(width: 320, height: 400)
                     ProgressView().tint(amber)
                 }
 

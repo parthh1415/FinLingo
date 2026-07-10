@@ -211,6 +211,11 @@ final class EconomyEngine: ObservableObject {
         gameState.investedBalance += gameState.investedBalance * annualReturn * (clampedElapsed / secondsPerYear)
         gameState.investedBalance += invested
         gameState.lastSeen = now
+        // Drop a history point on return so the share curve reflects offline progress too.
+        gameState.netWorthHistory.append(gameState.netWorth)
+        if gameState.netWorthHistory.count > maxSamples {
+            gameState.netWorthHistory.removeFirst(gameState.netWorthHistory.count - maxSamples)
+        }
         return credited
     }
 }
