@@ -2,12 +2,24 @@
 //  MarketplaceView.swift
 //  FinLingo
 //
-//  The in-game computer screen: a terminal-styled modal for buying GPUs (design §8).
+//  The in-game computer screen: a terminal-styled shop for decorating your space. For now the
+//  catalog is a preview — every item (and the pet) is listed as "coming soon" until the
+//  decoration system ships.
 //
 
 import SwiftUI
 
-/// A terminal/computer-screen modal that lets the player buy gear for the current stage.
+/// One shop item shown in the decoration catalog. Purely cosmetic for now — nothing is
+/// purchasable yet, so there's no cost or economy hook.
+private struct ShopItem: Identifiable {
+    let id = UUID()
+    let icon: String
+    let name: String
+    let blurb: String
+    let tag: String   // "DECOR" or "PET"
+}
+
+/// A terminal/computer-screen modal previewing the room-decoration shop.
 struct MarketplaceView: View {
 
     @ObservedObject var gameState: GameState
@@ -15,6 +27,20 @@ struct MarketplaceView: View {
 
     /// Invoked when the player taps Close or the dimmed scrim.
     var onClose: () -> Void
+
+    // MARK: - Catalog (all "coming soon" for now)
+
+    private let catalog: [ShopItem] = [
+        ShopItem(icon: "🐾", name: "Pet companion", blurb: "Adopt a little buddy to keep you company.", tag: "PET"),
+        ShopItem(icon: "🪧", name: "Wall posters", blurb: "Framed art to show off your style.", tag: "DECOR"),
+        ShopItem(icon: "✨", name: "String lights", blurb: "Warm fairy lights to cozy up the walls.", tag: "DECOR"),
+        ShopItem(icon: "🪴", name: "Potted plants", blurb: "A little green to make it feel alive.", tag: "DECOR"),
+        ShopItem(icon: "🧸", name: "Bean bag chair", blurb: "The comfiest spot to unwind.", tag: "DECOR"),
+        ShopItem(icon: "🛋️", name: "Cozy rug", blurb: "Soften the floor underfoot.", tag: "DECOR"),
+        ShopItem(icon: "💡", name: "Desk lamp", blurb: "Soft light for late-night study.", tag: "DECOR"),
+        ShopItem(icon: "📚", name: "Bookshelf", blurb: "Fill it with your favorites.", tag: "DECOR"),
+        ShopItem(icon: "❄️", name: "Mini fridge", blurb: "Snacks within arm's reach.", tag: "DECOR"),
+    ]
 
     // MARK: - Palette
     private let scrim = Color.black.opacity(0.6)
@@ -45,7 +71,7 @@ struct MarketplaceView: View {
             titleBar
             statusLine
             Rectangle().fill(screenEdge.opacity(0.35)).frame(height: 1)
-            gearList
+            itemList
             Rectangle().fill(screenEdge.opacity(0.35)).frame(height: 1)
             footer
         }
@@ -86,7 +112,7 @@ struct MarketplaceView: View {
         HStack(spacing: 6) {
             Text(">")
                 .foregroundColor(term)
-            Text("\(economy.currentStage.displayName.uppercased()) — upgrades that pay you")
+            Text("\(economy.currentStage.displayName.uppercased()) — upgrades to make it feel homey")
                 .foregroundColor(term.opacity(0.9))
             Spacer()
         }
@@ -95,11 +121,11 @@ struct MarketplaceView: View {
         .padding(.bottom, 12)
     }
 
-    private var gearList: some View {
+    private var itemList: some View {
         ScrollView {
             LazyVStack(spacing: 10) {
-                ForEach(economy.currentStage.gearCatalog) { gear in
-                    gearRow(gear)
+                ForEach(catalog) { item in
+                    itemRow(item)
                 }
             }
             .padding(16)
@@ -107,45 +133,39 @@ struct MarketplaceView: View {
         .frame(maxHeight: 400)
     }
 
-    private func gearRow(_ gear: GearDefinition) -> some View {
-        let affordable = economy.canAfford(gear)
-        let owned = gameState.ownedCount(of: gear.id)
-        return HStack(spacing: 12) {
+    private func itemRow(_ item: ShopItem) -> some View {
+        HStack(spacing: 12) {
+            Text(item.icon)
+                .font(.system(size: 26))
+
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 8) {
-                    Text(gear.displayName)
+                    Text(item.name)
                         .font(.system(.headline, design: .monospaced))
                         .foregroundColor(cream)
-                    if owned > 0 {
-                        Text("×\(owned)")
-                            .font(.system(.caption, design: .monospaced).weight(.bold))
-                            .foregroundColor(amber)
-                            .monospacedDigit()
-                    }
+                    Text(item.tag)
+                        .font(.system(.caption2, design: .monospaced).weight(.bold))
+                        .foregroundColor(item.tag == "PET" ? amber : term)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background((item.tag == "PET" ? amber : term).opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
                 }
-                Text("+\(CurrencyFormat.short(gear.computePerSecond * economy.currentStage.computeToCashRate))/s income")
+                Text(item.blurb)
                     .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(term)
+                    .foregroundColor(dim)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer(minLength: 8)
 
-            Button {
-                economy.purchase(gear)
-            } label: {
-                VStack(spacing: 1) {
-                    Text("BUY")
-                        .font(.system(.caption2, design: .monospaced).weight(.bold))
-                    Text(CurrencyFormat.short(gear.cost))
-                        .font(.system(.subheadline, design: .monospaced).weight(.bold))
-                        .monospacedDigit()
-                }
+            // No purchase yet — just a disabled "coming soon" pill.
+            Text("COMING\nSOON")
+                .font(.system(.caption2, design: .monospaced).weight(.bold))
+                .multilineTextAlignment(.center)
+                .foregroundColor(dim)
                 .frame(minWidth: 92, minHeight: 44)
-                .background(affordable ? amber : Color.white.opacity(0.06))
-                .foregroundColor(affordable ? Color(red: 0.06, green: 0.08, blue: 0.09) : dim)
+                .background(Color.white.opacity(0.06))
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-            .disabled(!affordable)
         }
         .padding(12)
         .background(Color.white.opacity(0.035))
