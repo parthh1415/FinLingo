@@ -25,6 +25,7 @@ final class SimulationEngine: ObservableObject {
     private let secondsPerMonth: Double = 5.0
     private let tickInterval: Double = 0.1
     private let monthlyReturn = FinRates.annualReturn / 12
+    private let debtMonthlyRate = 0.18 / 12        // ~18% APR on carried debt
     private let maxHistory = 360                   // 30 years of monthly points
     private let eventEveryMonths = 6
 
@@ -80,6 +81,9 @@ final class SimulationEngine: ObservableObject {
         let alloc = min(max(gameState.investAllocation, 0), 1)
         let invested = income * alloc
 
+        // Debt compounds too — that's the whole point of "don't carry a balance."
+        gameState.debt += gameState.debt * debtMonthlyRate
+
         // Existing investments grow first, then this month's contribution lands.
         gameState.investedBalance += gameState.investedBalance * monthlyReturn
         gameState.investedBalance += invested
@@ -101,7 +105,9 @@ final class SimulationEngine: ObservableObject {
 
     private func maybeTriggerEvent() {
         guard monthIndex > 0, monthIndex % eventEveryMonths == 0 else { return }
-        let available = LifeEventCatalog.all.filter { !usedEventIds.contains($0.id) }
+        var available = LifeEventCatalog.all.filter { !usedEventIds.contains($0.id) }
+        // Recycle the catalog once it's exhausted so events keep coming for the full run.
+        if available.isEmpty { usedEventIds.removeAll(); available = LifeEventCatalog.all }
         guard let event = available.randomElement() else { return }
         pendingEvent = event
     }
@@ -116,7 +122,6 @@ final class SimulationEngine: ObservableObject {
         gameState.investedBalance = max(0, gameState.investedBalance + choice.invested)
 
         if let id = pendingEvent?.id { usedEventIds.insert(id) }
-        recordNetWorth()
         PersistenceController.save(gameState)
         pendingEvent = nil
     }
