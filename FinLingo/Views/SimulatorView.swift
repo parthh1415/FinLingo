@@ -59,7 +59,7 @@ enum TradingContent {
 
 /// The hands-on tools on the right laptop. Not file-private so a lesson's "Practice this"
 /// link can deep-link straight to the matching tool.
-enum SimTool { case futureYou, trading, retirement, debt, emergency, grower }
+enum SimTool { case futureYou, trading, retirement, college, debt, emergency, grower }
 
 struct SimulatorView: View {
     @ObservedObject var gameState: GameState
@@ -104,6 +104,8 @@ struct SimulatorView: View {
                     }
                 case .retirement:
                     RetirementCalculator(gameState: gameState) { tool = nil }
+                case .college:
+                    CollegeFundCalculator { tool = nil }
                 case .grower:
                     CompoundGrower { tool = nil }
                 case .debt:
@@ -146,6 +148,7 @@ struct SimulatorView: View {
                 featuredCard("🔮 Future You", "See where your money moves take you by 65.") { tool = .futureYou }
                 toolCard("Trading sandbox", "Buy & sell real market history. Pairs with: investing.") { tool = .trading }
                 toolCard("401(k) calculator", "See your nest egg grow. Pairs with: compound interest.") { tool = .retirement }
+                toolCard("529 college fund", "Save for school, tax-free. Pairs with: college planning.") { tool = .college }
                 toolCard("Invest $X/month", "Watch small monthly amounts snowball. Pairs with: saving.") { tool = .grower }
                 toolCard("Debt payoff", "Crush a balance faster. Pairs with: using credit.") { tool = .debt }
                 toolCard("Emergency fund", "How many months are you covered? Pairs with: safety net.") { tool = .emergency }
@@ -622,6 +625,44 @@ private struct CompoundGrower: View {
             CalcRow(label: "You contributed", value: CurrencyFormat.short(contributed))
             CalcRow(label: "Investment growth", value: CurrencyFormat.short(max(0, future - contributed)), color: calcGreen)
             CalcNote(text: "The growth line usually dwarfs what you put in — that's compounding, and it rewards starting early.")
+        }
+    }
+}
+
+// MARK: - 529 college fund (pairs with the college-planning lesson)
+
+private struct CollegeFundCalculator: View {
+    var onBack: () -> Void
+    @State private var monthly = 200.0
+    @State private var years = 15.0
+    @State private var rate = FinRates.annualReturn
+
+    /// Ballpark all-in cost of four years at a public, in-state school today.
+    private let collegeCost = 110_000.0
+
+    private var future: Double {
+        let r = rate / 12, n = years * 12
+        return r == 0 ? monthly * n : monthly * ((pow(1 + r, n) - 1) / r)
+    }
+    private var contributed: Double { monthly * 12 * years }
+    private var coverage: Double { collegeCost > 0 ? min(future / collegeCost, 1) : 0 }
+
+    var body: some View {
+        CalcScreen(title: "529 college fund",
+                   subtitle: "A 529 grows tax-free when it's spent on school. Start early and compounding carries most of the load.",
+                   onBack: onBack) {
+            CalcSlider(label: "Monthly contribution", value: $monthly, range: 25...1500, step: 25, display: "$\(Int(monthly))/mo")
+            CalcSlider(label: "Years until college", value: $years, range: 1...18, step: 1, display: "\(Int(years)) yr")
+            CalcSlider(label: "Annual return", value: $rate, range: 0.02...0.10, step: 0.01, display: "\(Int(rate * 100))%")
+            CalcHeadline(label: "SAVED BY COLLEGE", value: CurrencyFormat.short(future))
+            CalcRow(label: "You contributed", value: CurrencyFormat.short(contributed))
+            CalcRow(label: "Tax-free growth", value: CurrencyFormat.short(max(0, future - contributed)), color: calcGreen)
+            CalcRow(label: "Covers of a ~$110K 4-yr degree",
+                    value: "\(Int(coverage * 100))%",
+                    color: coverage >= 1 ? calcGreen : calcAmber)
+            CalcNote(text: coverage >= 1
+                     ? "You're on track to cover a typical in-state 4-year degree — extra can go toward a pricier school or grad school."
+                     : "Nudging the monthly up, or starting a year or two earlier, moves this fast — the early years compound the longest.")
         }
     }
 }

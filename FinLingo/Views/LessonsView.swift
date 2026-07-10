@@ -245,6 +245,44 @@ enum LessonContent {
             practice: PracticeLink(label: "Invest $X/month", tool: .grower)
         ),
         Lesson(
+            id: "college_529",
+            topic: "COLLEGE",
+            title: "529 college savings",
+            teach: "A 529 is an account built for education: the money grows tax-free and comes out tax-free when it's spent on qualified school costs — tuition, books, and room & board. Anyone can open one for a future student, and starting early gives compounding years to work. Spend it on non-school stuff and you owe tax plus a penalty on the growth.",
+            questions: [
+                Question(
+                    id: "college_529_q1",
+                    prompt: "What's the main tax perk of a 529?",
+                    kind: .multipleChoice(options: ["It lowers your rent", "Growth is tax-free when spent on school", "It doubles your deposit"], correctIndex: 1)
+                ),
+                Question(
+                    id: "college_529_q2",
+                    prompt: "Drag each cost to whether a 529 can pay for it tax-free.",
+                    kind: .categorize(
+                        items: [
+                            CategoryItem(label: "Tuition", correctBucket: 0),
+                            CategoryItem(label: "Textbooks", correctBucket: 0),
+                            CategoryItem(label: "Room & board", correctBucket: 0),
+                            CategoryItem(label: "A new car", correctBucket: 1),
+                            CategoryItem(label: "Spring break trip", correctBucket: 1),
+                        ],
+                        buckets: ["529 covers", "Not qualified"]
+                    )
+                ),
+                Question(
+                    id: "college_529_q3",
+                    prompt: "Match each 529 term to what it means.",
+                    kind: .matching(pairs: [
+                        MatchPair(left: "529 plan", right: "tax-free college savings"),
+                        MatchPair(left: "Beneficiary", right: "the future student"),
+                        MatchPair(left: "Qualified expense", right: "tuition, books, housing"),
+                    ])
+                ),
+            ],
+            reward: 90,
+            practice: PracticeLink(label: "529 college fund", tool: .college)
+        ),
+        Lesson(
             id: "negotiation",
             topic: "EARNING",
             title: "Negotiating your pay",
