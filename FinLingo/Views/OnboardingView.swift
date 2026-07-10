@@ -187,9 +187,9 @@ struct OnboardingView: View {
             // Seed the progress curve with their true starting net worth so a share right
             // after onboarding shows an accurate baseline, not a hardcoded $1,000.
             netWorthHistory: [startingNetWorth],
-            playerName: nameText.trimmingCharacters(in: .whitespaces),
+            playerName: nameText.trimmingCharacters(in: .whitespacesAndNewlines),
             age: age,
-            jobTitle: jobText.trimmingCharacters(in: .whitespaces),
+            jobTitle: jobText.trimmingCharacters(in: .whitespacesAndNewlines),
             debt: debt
         )
         PersistenceController.save(state)

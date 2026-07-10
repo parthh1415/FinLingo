@@ -33,6 +33,7 @@ enum CurrencyFormat {
 /// Compact formatting for compute/sec (no currency symbol).
 enum NumberFormatShort {
     static func short(_ value: Double) -> String {
+        guard value.isFinite else { return "0" }
         let v = max(value, 0)
         switch v {
         case ..<1_000:                 return "\(Int(v))"

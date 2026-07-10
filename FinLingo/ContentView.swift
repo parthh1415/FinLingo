@@ -19,5 +19,6 @@ struct ContentView: View {
             }
         }
         .buttonStyle(.clicky) // every button clicks by default
+        .onAppear { MusicManager.shared.startIfEnabled() }
     }
 }

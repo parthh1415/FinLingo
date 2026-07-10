@@ -37,7 +37,7 @@ struct FutureYouView: View {
 
     private var allocation: Double { min(max(gameState.investAllocation, 0), 1) }
     private var monthly: Double { gameState.monthlyIncome * allocation }
-    private var boostedRate: Double { min(allocation + 0.2, 0.9) }
+    private var boostedRate: Double { max(allocation, min(allocation + 0.2, 0.9)) }
     private var boostedMonthly: Double { gameState.monthlyIncome * boostedRate }
 
     // Year-by-year net worth from the player's current age to retirement.

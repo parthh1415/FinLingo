@@ -22,6 +22,8 @@ enum PersistenceController {
     static func save(_ state: GameState) {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
+        // Never let a stray NaN/Inf make the whole save silently fail (default is .throw).
+        encoder.nonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "inf", negativeInfinity: "-inf", nan: "0")
 
         guard let data = try? encoder.encode(state) else { return }
         try? data.write(to: saveURL, options: .atomic)
@@ -34,6 +36,7 @@ enum PersistenceController {
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
+        decoder.nonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "inf", negativeInfinity: "-inf", nan: "0")
 
         return try? decoder.decode(GameState.self, from: data)
     }

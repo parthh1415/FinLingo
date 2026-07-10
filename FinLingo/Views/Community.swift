@@ -179,9 +179,14 @@ struct ShareProgressView: View {
         .onAppear { render() }
     }
 
-    @MainActor private func render() {
+    @MainActor private func render(attempt: Int = 0) {
         let renderer = ImageRenderer(content: ShareCard(gameState: gameState).frame(width: 380, height: 476))
         renderer.scale = 3
-        if let ui = renderer.uiImage { shareImage = Image(uiImage: ui) }
+        if let ui = renderer.uiImage {
+            shareImage = Image(uiImage: ui)
+        } else if attempt < 5 {
+            // ImageRenderer can return nil before the first layout pass — retry a few times.
+            DispatchQueue.main.async { render(attempt: attempt + 1) }
+        }
     }
 }

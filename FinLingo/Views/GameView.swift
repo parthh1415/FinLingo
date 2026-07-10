@@ -37,13 +37,13 @@ struct GameView: View {
     init() {
         let gs = PersistenceController.load() ?? GameState()
         let stages = Stages.all
-        let startStage = stages[min(gs.currentStageIndex, stages.count - 1)]
+        let startStage = stages[max(0, min(gs.currentStageIndex, stages.count - 1))]
         let engine = EconomyEngine(gameState: gs, stage: startStage)
         let controller = StageController(stages: stages, gameState: gs)
         let uiState = GameUIState()
         let world = WorldScene(gameState: gs, economy: engine, stageController: controller)
-        world.onOpenLessons = { [uiState] in Sound.tap(); uiState.showLessons = true }
-        world.onOpenSimulator = { [uiState] in Sound.tap(); uiState.showSimulator = true }
+        world.onOpenLessons = { [uiState] in Sound.tap(); uiState.closePanels(); uiState.showLessons = true }
+        world.onOpenSimulator = { [uiState] in Sound.tap(); uiState.closePanels(); uiState.showSimulator = true }
 
         _gameState = StateObject(wrappedValue: gs)
         _economy = StateObject(wrappedValue: engine)
@@ -78,6 +78,9 @@ struct GameView: View {
                         }
                     }
                     .frame(width: geo.size.width, height: gameH)
+                    .overlay(alignment: .topTrailing) {
+                        MusicToggle().padding(10)
+                    }
 
                     BottomHUDView(gameState: gameState, economy: economy, ui: ui)
                         .frame(width: geo.size.width, height: bottomH)
@@ -150,7 +153,7 @@ private struct TopHUDView: View {
                     .foregroundStyle(.white).monospacedDigit()
             }
             Spacer()
-            Button { ui.showCareer = true } label: {
+            Button { ui.closePanels(); ui.showCareer = true } label: {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("INCOME ›").font(.system(size: 11, weight: .semibold, design: .monospaced)).foregroundStyle(hudLabel)
                     Text("\(CurrencyFormat.short(gameState.monthlyIncome))/mo")
@@ -177,7 +180,7 @@ private struct BottomHUDView: View {
 
     var body: some View {
         HStack {
-            Button { ui.showBudget = true } label: {
+            Button { ui.closePanels(); ui.showBudget = true } label: {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("BUDGET ›").font(.system(size: 11, weight: .semibold, design: .monospaced)).foregroundStyle(hudLabel)
                     Text("+\(CurrencyFormat.short(perHour))/hr")
@@ -187,7 +190,7 @@ private struct BottomHUDView: View {
             }
             .buttonStyle(.clicky)
             Spacer()
-            Button { ui.showMarketplace = true } label: {
+            Button { ui.closePanels(); ui.showMarketplace = true } label: {
                 Text("SHOP")
                     .font(.system(size: 14, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color(red: 0.06, green: 0.08, blue: 0.09))

@@ -652,6 +652,8 @@ private struct DebtPayoffCalculator: View {
             remaining += monthInterest - payment
             months += 1
         }
+        // Hit the 100-year cap with balance still owed → this payment never realistically clears it.
+        if remaining > 0.005 { return (nil, 0) }
         return (months, max(0, interest))
     }
 

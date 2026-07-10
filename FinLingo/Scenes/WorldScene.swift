@@ -66,7 +66,7 @@ final class WorldScene: SKScene {
             stageNodes.append(node)
         }
 
-        currentIndex = min(gameState.currentStageIndex, stageNodes.count - 1)
+        currentIndex = max(0, min(gameState.currentStageIndex, stageNodes.count - 1))
         economy.currentStage = stageNodes[currentIndex].stage
         cameraController.snap(toStageIndex: currentIndex)
 
@@ -87,9 +87,11 @@ final class WorldScene: SKScene {
         economy.update(dt: dt)
         syncAllGear()
 
-        // Unlock the next stage the moment the player can afford it.
-        if currentIndex < stageNodes.count - 1, stageController.tryUnlockNext(from: currentIndex) {
-            stageNodes[currentIndex + 1].setLocked(false)
+        // Unlock the next stage the moment the player can afford it — based on the true
+        // frontier, so it unlocks even if the player has walked back to an earlier room.
+        let frontier = gameState.unlockedStageIndex
+        if frontier < stageNodes.count - 1, stageController.tryUnlockNext(from: frontier) {
+            stageNodes[frontier + 1].setLocked(false)
         }
 
         updatePlayerMovement(deltaTime: CGFloat(dt))
