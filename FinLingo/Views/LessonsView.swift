@@ -4,8 +4,8 @@
 //
 //  The left laptop's screen: bite-size money lessons. Each lesson teaches a concept,
 //  then checks it with a short run of mixed-format questions (multiple choice, true/false,
-//  fill-in-the-blank, ordering, matching); getting every question right on a lesson's
-//  first attempt pays out in-game cash that the player spends on room upgrades.
+//  tap-to-match pairs, and drag-into-buckets sorting); getting every question right on a
+//  lesson's first attempt pays out in-game cash that the player spends on room upgrades.
 //
 
 import SwiftUI
@@ -17,19 +17,24 @@ import SwiftUI
 enum QuestionKind {
     case multipleChoice(options: [String], correctIndex: Int)
     case trueFalse(correctAnswer: Bool)
-    /// A numeric fill-in-the-blank. `unit` is a short prefix/suffix shown next to the field
-    /// (e.g. "$"); `tolerance` allows answers that are close but not exact (e.g. Rule of 72
-    /// estimates).
-    case fillBlank(correctAnswer: Double, unit: String, tolerance: Double)
-    /// Tap items into the correct sequence. `correctOrder` lists indices into `items`.
-    case ordering(items: [String], correctOrder: [Int])
+    /// Tap a left term, then its matching right term.
     case matching(pairs: [MatchPair])
+    /// Drag each item into the bucket it belongs to. `buckets` are the category labels;
+    /// each item names the index of the bucket it belongs in.
+    case categorize(items: [CategoryItem], buckets: [String])
 }
 
 struct MatchPair: Identifiable {
     let id = UUID()
     let left: String
     let right: String
+}
+
+struct CategoryItem: Identifiable {
+    let id = UUID()
+    let label: String
+    /// Index into the question's `buckets` array that this item belongs to.
+    let correctBucket: Int
 }
 
 struct Question: Identifiable {
@@ -63,8 +68,16 @@ enum LessonContent {
                 ),
                 Question(
                     id: "budget_503020_q2",
-                    prompt: "Take-home pay is $2,000/month. Under the 50/30/20 rule, how much should go to \"wants\"?",
-                    kind: .fillBlank(correctAnswer: 600, unit: "$", tolerance: 0)
+                    prompt: "Drag each expense into its 50/30/20 bucket.",
+                    kind: .categorize(
+                        items: [
+                            CategoryItem(label: "Rent", correctBucket: 0),
+                            CategoryItem(label: "Streaming", correctBucket: 1),
+                            CategoryItem(label: "Emergency fund", correctBucket: 2),
+                            CategoryItem(label: "Extra debt payment", correctBucket: 2),
+                        ],
+                        buckets: ["Needs", "Wants", "Savings"]
+                    )
                 ),
                 Question(
                     id: "budget_503020_q3",
@@ -87,8 +100,16 @@ enum LessonContent {
                 ),
                 Question(
                     id: "emergency_fund_q2",
-                    prompt: "Essentials cost $1,500/month. A 3-month starter emergency fund is about how much?",
-                    kind: .fillBlank(correctAnswer: 4500, unit: "$", tolerance: 0)
+                    prompt: "Drag each expense to whether the emergency fund should cover it.",
+                    kind: .categorize(
+                        items: [
+                            CategoryItem(label: "Surprise car repair", correctBucket: 0),
+                            CategoryItem(label: "Rent after a job loss", correctBucket: 0),
+                            CategoryItem(label: "Black Friday TV", correctBucket: 1),
+                            CategoryItem(label: "Weekend trip", correctBucket: 1),
+                        ],
+                        buckets: ["Use the fund", "Don't touch it"]
+                    )
                 ),
                 Question(
                     id: "emergency_fund_q3",
@@ -112,16 +133,17 @@ enum LessonContent {
                 ),
                 Question(
                     id: "compound_interest_q2",
-                    prompt: "Using the Rule of 72, money growing at 9%/year roughly doubles in about how many years?",
-                    kind: .fillBlank(correctAnswer: 8, unit: "yrs", tolerance: 1)
+                    prompt: "True or false: starting to invest 10 years earlier, even with less money, often beats starting later with more.",
+                    kind: .trueFalse(correctAnswer: true)
                 ),
                 Question(
                     id: "compound_interest_q3",
-                    prompt: "Same starting amount, invested for 30 years. Order these from slowest to fastest growth.",
-                    kind: .ordering(
-                        items: ["Invested at 2%/yr", "Invested at 5%/yr", "Invested at 9%/yr"],
-                        correctOrder: [0, 1, 2]
-                    )
+                    prompt: "Using the Rule of 72, match each return to how long it takes to double.",
+                    kind: .matching(pairs: [
+                        MatchPair(left: "6% / year", right: "~12 years"),
+                        MatchPair(left: "9% / year", right: "~8 years"),
+                        MatchPair(left: "12% / year", right: "~6 years"),
+                    ])
                 ),
             ],
             reward: 120,
@@ -140,8 +162,16 @@ enum LessonContent {
                 ),
                 Question(
                     id: "credit_utilization_q2",
-                    prompt: "Card limit is $2,000. To stay under 30% utilization, keep your balance below how much?",
-                    kind: .fillBlank(correctAnswer: 600, unit: "$", tolerance: 0)
+                    prompt: "Drag each habit to what it does to your credit score.",
+                    kind: .categorize(
+                        items: [
+                            CategoryItem(label: "Pay in full monthly", correctBucket: 0),
+                            CategoryItem(label: "Keep utilization low", correctBucket: 0),
+                            CategoryItem(label: "Max out the card", correctBucket: 1),
+                            CategoryItem(label: "Miss a payment", correctBucket: 1),
+                        ],
+                        buckets: ["Helps score", "Hurts score"]
+                    )
                 ),
                 Question(
                     id: "credit_utilization_q3",
@@ -168,8 +198,8 @@ enum LessonContent {
                     prompt: "Match each account type to its typical yield.",
                     kind: .matching(pairs: [
                         MatchPair(left: "Checking account", right: "~0.01%"),
-                        MatchPair(left: "Normal savings account", right: "~0.4%"),
-                        MatchPair(left: "High-yield savings account", right: "~4–5%"),
+                        MatchPair(left: "Normal savings", right: "~0.4%"),
+                        MatchPair(left: "High-yield savings", right: "~4–5%"),
                     ])
                 ),
                 Question(
@@ -194,15 +224,15 @@ enum LessonContent {
                 ),
                 Question(
                     id: "negotiation_q2",
-                    prompt: "Put these negotiation steps in the right order.",
-                    kind: .ordering(
+                    prompt: "Drag each move into whether it's smart or risky when negotiating pay.",
+                    kind: .categorize(
                         items: [
-                            "Research the market salary range",
-                            "Let them make the first offer",
-                            "Counter once, politely, with a number",
-                            "Accept, or ask for time to decide",
+                            CategoryItem(label: "Research market rate", correctBucket: 0),
+                            CategoryItem(label: "Counter once politely", correctBucket: 0),
+                            CategoryItem(label: "Accept first offer instantly", correctBucket: 1),
+                            CategoryItem(label: "Give an ultimatum", correctBucket: 1),
                         ],
-                        correctOrder: [0, 1, 2, 3]
+                        buckets: ["Smart move", "Risky move"]
                     )
                 ),
                 Question(
@@ -466,12 +496,10 @@ private struct QuestionCard: View {
                 MultipleChoiceQuestion(options: options, correctIndex: correctIndex, palette: palette, onAnswered: onAnswered)
             case let .trueFalse(correctAnswer):
                 TrueFalseQuestion(correctAnswer: correctAnswer, palette: palette, onAnswered: onAnswered)
-            case let .fillBlank(correctAnswer, unit, tolerance):
-                FillBlankQuestion(correctAnswer: correctAnswer, unit: unit, tolerance: tolerance, palette: palette, onAnswered: onAnswered)
-            case let .ordering(items, correctOrder):
-                OrderingQuestion(items: items, correctOrder: correctOrder, palette: palette, onAnswered: onAnswered)
             case let .matching(pairs):
                 MatchingQuestion(pairs: pairs, palette: palette, onAnswered: onAnswered)
+            case let .categorize(items, buckets):
+                CategorizeQuestion(items: items, buckets: buckets, palette: palette, onAnswered: onAnswered)
             }
         }
     }
@@ -574,200 +602,234 @@ private struct TrueFalseQuestion: View {
     }
 }
 
-// MARK: - Fill in the blank (numeric)
-
-private struct FillBlankQuestion: View {
-    let correctAnswer: Double
-    let unit: String
-    let tolerance: Double
-    let palette: TerminalPalette
-    let onAnswered: (Bool) -> Void
-
-    @State private var text = ""
-    @State private var submitted: Bool?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                if unit == "$" {
-                    Text("$").font(.system(.subheadline, design: .monospaced).weight(.bold)).foregroundColor(palette.cream)
-                }
-                TextField("answer", text: $text)
-                    #if os(iOS)
-                    .keyboardType(.decimalPad)
-                    #endif
-                    .font(.system(.subheadline, design: .monospaced))
-                    .foregroundColor(palette.cream)
-                    .padding(10)
-                    .background(Color.white.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .disabled(submitted != nil)
-                if unit != "$" {
-                    Text(unit).font(.system(.subheadline, design: .monospaced)).foregroundColor(palette.dim)
-                }
-
-                if submitted == nil {
-                    Button("CHECK") { check() }
-                        .font(.system(.caption, design: .monospaced).weight(.bold))
-                        .foregroundColor(palette.screen)
-                        .padding(.horizontal, 12).padding(.vertical, 10)
-                        .background(palette.amber)
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                        .buttonStyle(.clicky)
-                        .disabled(Double(text) == nil)
-                }
-            }
-
-            if let submitted {
-                Text(submitted ? "✓ Correct" : "✗ Correct answer: \(unit == "$" ? "$" : "")\(formatted(correctAnswer))\(unit == "$" ? "" : " \(unit)")")
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(submitted ? palette.term : palette.bad)
-            }
-        }
-    }
-
-    private func formatted(_ v: Double) -> String {
-        v == v.rounded() ? String(Int(v)) : String(v)
-    }
-
-    private func check() {
-        guard submitted == nil, let value = Double(text) else { return }
-        let correct = abs(value - correctAnswer) <= tolerance
-        submitted = correct
-        onAnswered(correct)
-    }
-}
-
-// MARK: - Ordering (tap items into sequence)
-
-private struct OrderingQuestion: View {
-    let items: [String]
-    let correctOrder: [Int]
-    let palette: TerminalPalette
-    let onAnswered: (Bool) -> Void
-
-    /// Indices into `items`, in the order the player tapped them.
-    @State private var tapped: [Int] = []
-    @State private var resolved: Bool?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(items.indices, id: \.self) { i in
-                Button { tap(i) } label: {
-                    HStack {
-                        if let position = tapped.firstIndex(of: i) {
-                            Text("\(position + 1)")
-                                .font(.system(.caption, design: .monospaced).weight(.bold))
-                                .foregroundColor(palette.screen)
-                                .frame(width: 20, height: 20)
-                                .background(Circle().fill(palette.amber))
-                        }
-                        Text(items[i]).font(.system(.subheadline, design: .monospaced)).foregroundColor(palette.cream)
-                        Spacer()
-                    }
-                    .padding(12)
-                    .background(rowBackground(i))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.white.opacity(0.08), lineWidth: 1))
-                }
-                .buttonStyle(.clicky)
-                .disabled(resolved != nil || tapped.contains(i))
-            }
-
-            if resolved == nil, !tapped.isEmpty {
-                Button("RESET") { tapped = [] }
-                    .font(.system(.caption, design: .monospaced).weight(.bold))
-                    .foregroundColor(palette.dim)
-                    .buttonStyle(.clicky)
-            }
-
-            if let resolved {
-                Text(resolved ? "✓ Correct order" : "✗ Not quite the right order")
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(resolved ? palette.term : palette.bad)
-            }
-        }
-    }
-
-    private func rowBackground(_ i: Int) -> Color {
-        guard let resolved else { return Color.white.opacity(0.035) }
-        return resolved ? palette.term.opacity(0.12) : palette.bad.opacity(0.12)
-    }
-
-    private func tap(_ i: Int) {
-        guard resolved == nil, !tapped.contains(i) else { return }
-        tapped.append(i)
-        guard tapped.count == items.count else { return }
-        let correct = tapped == correctOrder
-        resolved = correct
-        onAnswered(correct)
-    }
-}
-
-// MARK: - Matching (tap a left item, then its right pair)
+// MARK: - Matching (tap a left term, then its right pair)
 
 private struct MatchingQuestion: View {
     let pairs: [MatchPair]
     let palette: TerminalPalette
     let onAnswered: (Bool) -> Void
 
-    private let leftOrder: [MatchPair]
-    private let rightOrder: [MatchPair]
-
+    /// The right column, shuffled ONCE and held in state so re-renders don't reshuffle it
+    /// out from under the player mid-question (the original bug).
+    @State private var rightOrder: [MatchPair] = []
     @State private var selectedLeft: MatchPair.ID?
     @State private var matched: Set<MatchPair.ID> = []
-
-    init(pairs: [MatchPair], palette: TerminalPalette, onAnswered: @escaping (Bool) -> Void) {
-        self.pairs = pairs
-        self.palette = palette
-        self.onAnswered = onAnswered
-        self.leftOrder = pairs
-        self.rightOrder = pairs.shuffled()
-    }
+    /// Briefly set to a right id that was just mis-tapped, so we can flash it red.
+    @State private var wrongRight: MatchPair.ID?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            VStack(spacing: 8) {
-                ForEach(leftOrder) { pair in
-                    chip(pair.left, isMatched: matched.contains(pair.id), isSelected: selectedLeft == pair.id) {
-                        guard !matched.contains(pair.id) else { return }
-                        selectedLeft = pair.id
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Tap a term, then its match.")
+                .font(.system(.caption2, design: .monospaced)).foregroundColor(palette.dim)
+
+            HStack(alignment: .top, spacing: 10) {
+                VStack(spacing: 8) {
+                    ForEach(pairs) { pair in
+                        chip(pair.left,
+                             state: matched.contains(pair.id) ? .matched : (selectedLeft == pair.id ? .selected : .idle)) {
+                            guard !matched.contains(pair.id) else { return }
+                            selectedLeft = pair.id
+                        }
                     }
                 }
-            }
-            VStack(spacing: 8) {
-                ForEach(rightOrder) { pair in
-                    chip(pair.right, isMatched: matched.contains(pair.id), isSelected: false) {
-                        guard let left = selectedLeft, !matched.contains(pair.id) else { return }
-                        attemptMatch(left: left, right: pair.id)
+                VStack(spacing: 8) {
+                    ForEach(rightOrder) { pair in
+                        chip(pair.right,
+                             state: matched.contains(pair.id) ? .matched : (wrongRight == pair.id ? .wrong : .idle)) {
+                            tapRight(pair.id)
+                        }
                     }
                 }
             }
         }
+        .onAppear { if rightOrder.isEmpty { rightOrder = pairs.shuffled() } }
     }
 
-    private func chip(_ text: String, isMatched: Bool, isSelected: Bool, action: @escaping () -> Void) -> some View {
+    private enum ChipState { case idle, selected, matched, wrong }
+
+    private func chip(_ text: String, state: ChipState, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(text)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundColor(palette.cream)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(10)
-                .background(isMatched ? palette.term.opacity(0.18) : isSelected ? palette.amber.opacity(0.25) : Color.white.opacity(0.035))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.white.opacity(0.08), lineWidth: 1))
+            HStack(spacing: 4) {
+                Text(text).font(.system(.caption, design: .monospaced)).foregroundColor(palette.cream)
+                if state == .matched { Text("✓").foregroundColor(palette.term) }
+                Spacer(minLength: 0)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(background(for: state))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.white.opacity(0.08), lineWidth: 1))
         }
         .buttonStyle(.clicky)
-        .disabled(isMatched)
+        .disabled(state == .matched)
     }
 
-    private func attemptMatch(left: MatchPair.ID, right: MatchPair.ID) {
-        if left == right {
+    private func background(for state: ChipState) -> Color {
+        switch state {
+        case .idle:     return Color.white.opacity(0.035)
+        case .selected: return palette.amber.opacity(0.25)
+        case .matched:  return palette.term.opacity(0.18)
+        case .wrong:    return palette.bad.opacity(0.20)
+        }
+    }
+
+    private func tapRight(_ rightID: MatchPair.ID) {
+        guard let left = selectedLeft, !matched.contains(rightID) else { return }
+        if left == rightID {
             matched.insert(left)
             selectedLeft = nil
             if matched.count == pairs.count { onAnswered(true) }
         } else {
-            selectedLeft = nil // wrong pairing — deselect and let them try again
+            // Wrong pairing: flash the tapped right chip, then clear the selection.
+            selectedLeft = nil
+            wrongRight = rightID
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                if wrongRight == rightID { wrongRight = nil }
+            }
         }
+    }
+}
+
+// MARK: - Categorize (drag each item into the correct bucket)
+
+private struct CategorizeQuestion: View {
+    let items: [CategoryItem]
+    let buckets: [String]
+    let palette: TerminalPalette
+    let onAnswered: (Bool) -> Void
+
+    /// itemID -> index of the bucket it's currently dropped in (nil = still in the tray).
+    @State private var placement: [UUID: Int] = [:]
+    /// Bucket currently under a drag, for the drop highlight.
+    @State private var targeted: Int?
+    /// nil until the player checks; then whether every item landed in the right bucket.
+    @State private var resolved: Bool?
+
+    private var unplaced: [CategoryItem] { items.filter { placement[$0.id] == nil } }
+    private func items(in bucket: Int) -> [CategoryItem] { items.filter { placement[$0.id] == bucket } }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 8) {
+                ForEach(buckets.indices, id: \.self) { b in
+                    bucketView(b)
+                }
+            }
+
+            if !unplaced.isEmpty {
+                Text("Drag each into a box:")
+                    .font(.system(.caption2, design: .monospaced)).foregroundColor(palette.dim)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 8)], spacing: 8) {
+                    ForEach(unplaced) { item in
+                        chip(item, correctness: nil)
+                            .draggable(item.id.uuidString)
+                    }
+                }
+            } else if resolved == nil {
+                Button { check() } label: {
+                    Text("CHECK")
+                        .font(.system(.subheadline, design: .monospaced).weight(.bold))
+                        .foregroundColor(palette.screen)
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                        .background(palette.amber)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.clicky)
+            }
+
+            if let resolved {
+                Text(resolved ? "✓ All sorted correctly" : "✗ Some are in the wrong box")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(resolved ? palette.term : palette.bad)
+            }
+        }
+    }
+
+    private func bucketView(_ b: Int) -> some View {
+        VStack(spacing: 6) {
+            Text(buckets[b])
+                .font(.system(.caption2, design: .monospaced).weight(.bold))
+                .foregroundColor(palette.amber)
+                .lineLimit(1).minimumScaleFactor(0.7)
+
+            VStack(spacing: 6) {
+                if items(in: b).isEmpty {
+                    Text("drop here")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundColor(palette.dim.opacity(0.6))
+                        .frame(maxWidth: .infinity)
+                } else {
+                    ForEach(items(in: b)) { item in
+                        placedChip(item, bucket: b)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 56, alignment: .top)
+            .padding(8)
+            .background(targeted == b ? palette.amber.opacity(0.15) : Color.white.opacity(0.04))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(targeted == b ? palette.amber : Color.white.opacity(0.1), lineWidth: 1))
+        }
+        .dropDestination(for: String.self) { ids, _ in
+            place(ids, into: b)
+        } isTargeted: { isIn in
+            targeted = isIn ? b : (targeted == b ? nil : targeted)
+        }
+    }
+
+    /// A chip that's already inside a bucket. Draggable to another bucket until checked.
+    @ViewBuilder
+    private func placedChip(_ item: CategoryItem, bucket: Int) -> some View {
+        if resolved == nil {
+            chip(item, correctness: nil).draggable(item.id.uuidString)
+        } else {
+            chip(item, correctness: item.correctBucket == bucket)
+        }
+    }
+
+    private func chip(_ item: CategoryItem, correctness: Bool?) -> some View {
+        HStack(spacing: 4) {
+            Text(item.label)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundColor(palette.cream)
+                .lineLimit(2).minimumScaleFactor(0.7)
+            if let correctness {
+                Text(correctness ? "✓" : "✗").foregroundColor(correctness ? palette.term : palette.bad)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10).padding(.vertical, 8)
+        .background(chipBackground(correctness))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
+    }
+
+    private func chipBackground(_ correctness: Bool?) -> Color {
+        switch correctness {
+        case .some(true):  return palette.term.opacity(0.18)
+        case .some(false): return palette.bad.opacity(0.18)
+        case .none:        return Color.white.opacity(0.06)
+        }
+    }
+
+    private func place(_ ids: [String], into bucket: Int) -> Bool {
+        guard resolved == nil else { return false }
+        var moved = false
+        for id in ids {
+            if let item = items.first(where: { $0.id.uuidString == id }) {
+                placement[item.id] = bucket
+                moved = true
+            }
+        }
+        targeted = nil
+        return moved
+    }
+
+    private func check() {
+        guard resolved == nil, unplaced.isEmpty else { return }
+        let correct = items.allSatisfy { placement[$0.id] == $0.correctBucket }
+        resolved = correct
+        onAnswered(correct)
     }
 }
