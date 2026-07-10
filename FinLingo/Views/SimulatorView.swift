@@ -43,10 +43,20 @@ enum TradingContent {
                      271.06, 267.61, 270.71, 270.17, 271.35, 280.14, 276.83, 284.18, 287.51,
                      287.44, 293.32]
         ),
+        TradeScenario(
+            id: "nvda_run",
+            title: "The AI rocket",
+            symbol: "NVDA",
+            blurb: "Nvidia on a tear — huge upside, gut-check volatility.",
+            prices: [165.17, 174.40, 175.75, 177.39, 177.64, 178.10, 182.08, 183.91, 188.63,
+                     189.31, 196.51, 198.87, 198.35, 201.68, 202.06, 199.88, 202.50, 199.64,
+                     208.27, 216.61, 213.17, 209.25, 199.57, 198.45, 198.48, 196.50, 207.83,
+                     211.50, 215.20]
+        ),
     ]
 }
 
-private enum SimTool { case trading, retirement }
+private enum SimTool { case trading, retirement, debt, emergency, grower }
 
 struct SimulatorView: View {
     @ObservedObject var gameState: GameState
@@ -80,6 +90,12 @@ struct SimulatorView: View {
                     }
                 case .retirement:
                     RetirementCalculator(gameState: gameState) { tool = nil }
+                case .grower:
+                    CompoundGrower { tool = nil }
+                case .debt:
+                    DebtPayoffCalculator { tool = nil }
+                case .emergency:
+                    EmergencyFundCalculator(gameState: gameState) { tool = nil }
                 }
                 Rectangle().fill(edge.opacity(0.35)).frame(height: 1)
                 footer
@@ -115,6 +131,9 @@ struct SimulatorView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 toolCard("Trading sandbox", "Buy & sell real market history. Pairs with: investing.") { tool = .trading }
                 toolCard("401(k) calculator", "See your nest egg grow. Pairs with: compound interest.") { tool = .retirement }
+                toolCard("Invest $X/month", "Watch small monthly amounts snowball. Pairs with: saving.") { tool = .grower }
+                toolCard("Debt payoff", "Crush a balance faster. Pairs with: using credit.") { tool = .debt }
+                toolCard("Emergency fund", "How many months are you covered? Pairs with: safety net.") { tool = .emergency }
             }
             .padding(16)
         }
@@ -419,6 +438,197 @@ private struct RetirementCalculator: View {
             Text(label).font(.system(.caption, design: .monospaced)).foregroundColor(dim)
             Spacer()
             Text(CurrencyFormat.short(amount)).font(.system(.subheadline, design: .monospaced).weight(.bold)).foregroundColor(color).monospacedDigit()
+        }
+    }
+}
+
+// MARK: - Shared calculator building blocks
+
+private let calcGreen = Color(red: 0.55, green: 0.80, blue: 0.52)
+private let calcCream = Color(red: 0.96, green: 0.90, blue: 0.70)
+private let calcAmber = Color(red: 0.93, green: 0.70, blue: 0.32)
+private let calcRed = Color(red: 0.86, green: 0.28, blue: 0.24)
+private let calcDim = Color(red: 0.96, green: 0.90, blue: 0.70).opacity(0.45)
+
+private struct CalcScreen<Content: View>: View {
+    let title: String
+    let subtitle: String
+    var onBack: () -> Void
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Button { onBack() } label: {
+                    Text("‹ TOOLS").font(.system(.caption, design: .monospaced).weight(.bold)).foregroundColor(calcDim)
+                }
+                Text(title).font(.system(.title3, design: .monospaced).weight(.bold)).foregroundColor(calcCream)
+                Text(subtitle).font(.system(.caption, design: .monospaced)).foregroundColor(calcDim).lineSpacing(2)
+                content
+            }
+            .padding(16)
+        }
+        .frame(maxHeight: 500)
+    }
+}
+
+private struct CalcSlider: View {
+    let label: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let step: Double
+    let display: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(label).font(.system(.caption, design: .monospaced)).foregroundColor(calcCream)
+                Spacer()
+                Text(display).font(.system(.caption, design: .monospaced).weight(.bold)).foregroundColor(calcAmber)
+            }
+            Slider(value: $value, in: range, step: step).tint(calcAmber)
+        }
+    }
+}
+
+private struct CalcHeadline: View {
+    let label: String
+    let value: String
+    var color: Color = calcAmber
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label).font(.system(.caption2, design: .monospaced).weight(.bold)).foregroundColor(calcGreen)
+            Text(value).font(.system(size: 34, weight: .heavy, design: .monospaced)).foregroundColor(color).monospacedDigit()
+        }
+    }
+}
+
+private struct CalcRow: View {
+    let label: String
+    let value: String
+    var color: Color = calcCream
+    var body: some View {
+        HStack {
+            Text(label).font(.system(.caption, design: .monospaced)).foregroundColor(calcDim)
+            Spacer()
+            Text(value).font(.system(.subheadline, design: .monospaced).weight(.bold)).foregroundColor(color).monospacedDigit()
+        }
+    }
+}
+
+private struct CalcNote: View {
+    let text: String
+    var body: some View {
+        Text(text).font(.system(.caption, design: .monospaced)).foregroundColor(calcDim).lineSpacing(2)
+    }
+}
+
+// MARK: - Invest $X/month (pairs with the saving / compounding lessons)
+
+private struct CompoundGrower: View {
+    var onBack: () -> Void
+    @State private var monthly = 200.0
+    @State private var years = 20.0
+    @State private var rate = 0.07
+
+    private var future: Double {
+        let r = rate / 12, n = years * 12
+        return r == 0 ? monthly * n : monthly * ((pow(1 + r, n) - 1) / r)
+    }
+    private var contributed: Double { monthly * 12 * years }
+
+    var body: some View {
+        CalcScreen(title: "Invest $X a month", subtitle: "Small, steady amounts turn into a lot given time.", onBack: onBack) {
+            CalcSlider(label: "Monthly amount", value: $monthly, range: 25...1000, step: 25, display: "$\(Int(monthly))/mo")
+            CalcSlider(label: "Years", value: $years, range: 1...40, step: 1, display: "\(Int(years)) yr")
+            CalcSlider(label: "Annual return", value: $rate, range: 0.02...0.10, step: 0.01, display: "\(Int(rate * 100))%")
+            CalcHeadline(label: "IN \(Int(years)) YEARS YOU'D HAVE", value: CurrencyFormat.short(future))
+            CalcRow(label: "You contributed", value: CurrencyFormat.short(contributed))
+            CalcRow(label: "Investment growth", value: CurrencyFormat.short(max(0, future - contributed)), color: calcGreen)
+            CalcNote(text: "The growth line usually dwarfs what you put in — that's compounding, and it rewards starting early.")
+        }
+    }
+}
+
+// MARK: - Debt payoff (pairs with the credit lesson)
+
+private struct DebtPayoffCalculator: View {
+    var onBack: () -> Void
+    @State private var balance = 3000.0
+    @State private var apr = 0.22
+    @State private var payment = 150.0
+
+    // Months to clear the balance and the interest paid along the way.
+    private var result: (months: Int?, interest: Double) {
+        let i = apr / 12
+        // Zero-interest debt is just balance ÷ payment.
+        if i == 0 {
+            return (Int(ceil(balance / payment)), 0)
+        }
+        // Payment must clear more than the monthly interest or the balance never shrinks.
+        guard payment > balance * i else { return (nil, 0) }
+        // Amortize month by month so the interest total is exact — the final payment is partial,
+        // so a flat payment × months would over-count it.
+        var remaining = balance
+        var interest = 0.0
+        var months = 0
+        while remaining > 0.005 && months < 1200 {
+            let monthInterest = remaining * i
+            interest += monthInterest
+            remaining += monthInterest - payment
+            months += 1
+        }
+        return (months, max(0, interest))
+    }
+
+    var body: some View {
+        CalcScreen(title: "Debt payoff", subtitle: "See how fast a card clears — and what the interest costs you.", onBack: onBack) {
+            CalcSlider(label: "Balance", value: $balance, range: 500...15000, step: 100, display: "$\(Int(balance))")
+            CalcSlider(label: "Interest rate (APR)", value: $apr, range: 0...0.30, step: 0.01, display: "\(Int(apr * 100))%")
+            CalcSlider(label: "Monthly payment", value: $payment, range: 25...1000, step: 25, display: "$\(Int(payment))/mo")
+            if let months = result.months {
+                CalcHeadline(label: "PAID OFF IN", value: months >= 12 ? "\(months / 12)y \(months % 12)m" : "\(months) mo")
+                CalcRow(label: "Total interest paid", value: CurrencyFormat.short(result.interest), color: calcRed)
+                CalcNote(text: "Nudge the payment up and watch both the time and the interest drop — that's why paying more than the minimum matters.")
+            } else {
+                CalcHeadline(label: "PAID OFF IN", value: "never", color: calcRed)
+                CalcNote(text: "Your payment barely covers the interest, so the balance never shrinks. Raise the monthly payment above the interest to make progress.")
+            }
+        }
+    }
+}
+
+// MARK: - Emergency fund (pairs with the safety-net lesson)
+
+private struct EmergencyFundCalculator: View {
+    @ObservedObject var gameState: GameState
+    var onBack: () -> Void
+
+    @State private var essentials: Double
+    @State private var savings = 2000.0
+
+    init(gameState: GameState, onBack: @escaping () -> Void) {
+        self.gameState = gameState
+        self.onBack = onBack
+        let seed = gameState.monthlySpending > 0 ? gameState.monthlySpending : 2000
+        _essentials = State(initialValue: min(max(seed, 500), 6000)) // keep inside the slider range
+    }
+
+    private var monthsCovered: Double { essentials > 0 ? savings / essentials : 0 }
+    private var gapToThree: Double { max(0, essentials * 3 - savings) }
+
+    var body: some View {
+        CalcScreen(title: "Emergency fund", subtitle: "A cushion of essential expenses keeps one bad month from becoming debt.", onBack: onBack) {
+            CalcSlider(label: "Monthly essentials", value: $essentials, range: 500...6000, step: 100, display: "$\(Int(essentials))/mo")
+            CalcSlider(label: "Saved so far", value: $savings, range: 0...30000, step: 250, display: "$\(Int(savings))")
+            CalcHeadline(label: "YOU'RE COVERED FOR",
+                         value: String(format: "%.1f months", monthsCovered),
+                         color: monthsCovered >= 3 ? calcGreen : calcAmber)
+            CalcRow(label: "3-month target", value: CurrencyFormat.short(essentials * 3))
+            CalcRow(label: "6-month target", value: CurrencyFormat.short(essentials * 6))
+            CalcNote(text: gapToThree > 0
+                     ? "You're \(CurrencyFormat.short(gapToThree)) away from a 3-month cushion — a solid first goal before investing heavily."
+                     : "You've got at least 3 months covered. Nice cushion — now money can go to work investing.")
         }
     }
 }

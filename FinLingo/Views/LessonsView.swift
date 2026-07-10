@@ -41,7 +41,8 @@ enum LessonContent {
             question: "Your essentials are $2,000/mo. A solid starter emergency fund is about:",
             options: ["$500", "$1,000", "$6,000"],
             correctIndex: 2,
-            reward: 75
+            reward: 75,
+            practiceHint: "↳ Practice this: Simulator › Emergency fund"
         ),
         Lesson(
             id: "compound_interest",
@@ -62,7 +63,8 @@ enum LessonContent {
             question: "Card limit is $1,000. To keep utilization healthy, stay under:",
             options: ["$300", "$700", "$1,000"],
             correctIndex: 0,
-            reward: 75
+            reward: 75,
+            practiceHint: "↳ Practice this: Simulator › Debt payoff"
         ),
         Lesson(
             id: "high_yield_savings",
@@ -72,7 +74,8 @@ enum LessonContent {
             question: "$5,000 in a 4% high-yield account earns about how much in a year?",
             options: ["$5", "$50", "$200"],
             correctIndex: 2,
-            reward: 75
+            reward: 75,
+            practiceHint: "↳ Practice this: Simulator › Invest $X/month"
         ),
         Lesson(
             id: "negotiation",

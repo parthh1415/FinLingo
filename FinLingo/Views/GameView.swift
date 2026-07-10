@@ -9,9 +9,16 @@ final class GameUIState: ObservableObject {
     @Published var showCareer = false
     @Published var showBudget = false
     @Published var showMarketplace = false
-    @Published var showInventory = false
-    @Published var showIncome = false
     @Published var welcomeBackAmount: Double = 0
+
+    /// Close any open panel — used before showing the welcome-back popup so modals never stack.
+    func closePanels() {
+        showLessons = false
+        showSimulator = false
+        showCareer = false
+        showBudget = false
+        showMarketplace = false
+    }
 }
 
 struct GameView: View {
@@ -94,12 +101,6 @@ struct GameView: View {
             if ui.showMarketplace {
                 MarketplaceView(gameState: gameState, economy: economy) { ui.showMarketplace = false }
             }
-            if ui.showInventory {
-                InventoryView(gameState: gameState) { ui.showInventory = false }
-            }
-            if ui.showIncome {
-                IncomeView(gameState: gameState, economy: economy) { ui.showIncome = false }
-            }
             if ui.welcomeBackAmount >= 1 {
                 WelcomeBackView(amount: ui.welcomeBackAmount) { ui.welcomeBackAmount = 0 }
             }
@@ -120,7 +121,10 @@ struct GameView: View {
 
     private func creditOfflineEarnings() {
         let credited = economy.applyOfflineEarnings(now: Date())
-        if credited >= 1 { ui.welcomeBackAmount = credited }
+        if credited >= 1 {
+            ui.closePanels() // don't let the welcome-back popup stack on top of an open panel
+            ui.welcomeBackAmount = credited
+        }
     }
 }
 

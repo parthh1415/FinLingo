@@ -147,13 +147,15 @@ struct OnboardingView: View {
 
     private func submit() {
         guard let income else { return }
-        let spending = Double(spendingText) ?? 0
+        // Cap the free-text numbers so downstream Int() conversions can never overflow/crash.
+        let cap = 1_000_000.0
+        let spending = min(max(Double(spendingText) ?? 0, 0), cap)
         let state = GameState(
             cash: 1000,
             lastSeen: Date(),
             hasOnboarded: true,
-            monthlyIncome: income,
-            monthlySpending: spending > 0 ? spending : 0,
+            monthlyIncome: min(income, cap),
+            monthlySpending: spending,
             goals: goals,
             household: household
         )

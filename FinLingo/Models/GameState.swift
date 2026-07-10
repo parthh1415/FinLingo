@@ -147,5 +147,7 @@ final class GameState: ObservableObject, Codable {
         try c.encode(household, forKey: .household)
         try c.encode(sideHustles, forKey: .sideHustles)
         try c.encode(negotiationDone, forKey: .negotiationDone)
+        try c.encode(investAllocation, forKey: .investAllocation)
+        try c.encode(investedBalance, forKey: .investedBalance)
     }
 }

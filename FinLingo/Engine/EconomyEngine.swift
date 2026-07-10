@@ -130,10 +130,13 @@ final class EconomyEngine: ObservableObject {
         // Gear income lands as cash. Salary splits by the budget: the invested share
         // goes into the compounding pot, the rest is spendable cash.
         let salary = incomePerSec * dt
-        let invested = salary * gameState.investAllocation
+        let alloc = min(max(gameState.investAllocation, 0), 1)
+        let invested = salary * alloc
         gameState.cash += cashPerSec * dt + (salary - invested)
-        gameState.investedBalance += invested
+        // Grow the existing balance first, then add this tick's fresh contribution — so new
+        // money doesn't earn a full period of return the instant it lands.
         gameState.investedBalance += gameState.investedBalance * annualReturn * (dt / secondsPerYear)
+        gameState.investedBalance += invested
     }
 
     // MARK: - Interaction
@@ -187,11 +190,12 @@ final class EconomyEngine: ObservableObject {
         let clampedElapsed = min(max(0, elapsed), offlineCapSeconds)
         let idlePerSec = computePerSec * currentStage.computeToCashRate
         let salaryTotal = incomePerSec * clampedElapsed
-        let invested = salaryTotal * gameState.investAllocation
+        let alloc = min(max(gameState.investAllocation, 0), 1)
+        let invested = salaryTotal * alloc
         let credited = idlePerSec * clampedElapsed + (salaryTotal - invested)
         gameState.cash += credited
-        gameState.investedBalance += invested
         gameState.investedBalance += gameState.investedBalance * annualReturn * (clampedElapsed / secondsPerYear)
+        gameState.investedBalance += invested
         gameState.lastSeen = now
         return credited
     }
