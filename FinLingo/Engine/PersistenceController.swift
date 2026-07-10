@@ -38,7 +38,21 @@ enum PersistenceController {
         decoder.dateDecodingStrategy = .iso8601
         decoder.nonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "inf", negativeInfinity: "-inf", nan: "0")
 
-        return try? decoder.decode(GameState.self, from: data)
+        guard let state = try? decoder.decode(GameState.self, from: data) else { return nil }
+        migrateAnsweredQuestions(state)
+        return state
+    }
+
+    /// Back-fills `answeredQuestions` for lessons that were already finished under the old
+    /// lump-sum reward system. Without this, a returning player whose save predates
+    /// per-question scoring would be paid a second time for questions in lessons they'd
+    /// already completed. Idempotent, so it's a no-op for saves written by the new system.
+    private static func migrateAnsweredQuestions(_ state: GameState) {
+        for lesson in LessonContent.all where state.completedLessons.contains(lesson.id) {
+            for question in lesson.questions {
+                state.answeredQuestions.insert(question.id)
+            }
+        }
     }
 
     /// Removes the save file if present (useful for tests/reset).
