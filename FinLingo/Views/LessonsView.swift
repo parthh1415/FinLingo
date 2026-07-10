@@ -453,7 +453,6 @@ private struct LessonDetail: View {
                         Text("↳ Practice this: \(practice.label) ›")
                             .font(.system(.caption, design: .monospaced).weight(.bold))
                             .foregroundColor(palette.term)
-                            .underline()
                     }
                     .buttonStyle(.clicky)
                 }
