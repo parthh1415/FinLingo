@@ -134,7 +134,10 @@ struct GameView: View {
             }
         }
         .onAppear { creditOfflineEarnings(); sim.start() }
-        .onChange(of: gameCovered) { _, covered in sim.isSuspended = covered }
+        .onChange(of: gameCovered) { _, covered in
+            sim.isSuspended = covered
+            scene.isPaused = covered   // freeze movement/economy too, so she can't wander behind a panel
+        }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:

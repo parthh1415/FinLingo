@@ -856,6 +856,8 @@ private struct MatchingQuestion: View {
     @State private var matchNumber: [MatchPair.ID: Int] = [:]
     /// Briefly set to a right id that was just mis-tapped, so we can flash it red.
     @State private var wrongRight: MatchPair.ID?
+    /// Whether the player has mis-tapped at least once — solving by trial-and-error scores wrong.
+    @State private var missed = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -915,9 +917,11 @@ private struct MatchingQuestion: View {
         if left == rightID {
             matchNumber[left] = matchNumber.count + 1
             selectedLeft = nil
-            if matchNumber.count == pairs.count { onAnswered(true) }
+            // Completing the board scores correct only if it was solved with no wrong taps.
+            if matchNumber.count == pairs.count { onAnswered(!missed) }
         } else {
-            // Wrong pairing: flash the tapped right chip, then clear the selection.
+            // Wrong pairing: a mistake counts against the score, then flash the chip red.
+            missed = true
             selectedLeft = nil
             wrongRight = rightID
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {

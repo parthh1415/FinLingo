@@ -142,6 +142,13 @@ final class GameState: ObservableObject, Codable {
         if !monthlySpending.isFinite { monthlySpending = 0 }
         if !investAllocation.isFinite { investAllocation = 0 }
         netWorthHistory = netWorthHistory.filter { $0.isFinite }
+
+        // Keep the stage indices in range so a corrupt/tampered save can't index Stages.all out of
+        // bounds (a negative index would crash on the first frame). monthIndex can't go negative.
+        let maxStage = max(0, Stages.all.count - 1)
+        unlockedStageIndex = min(max(unlockedStageIndex, 0), maxStage)
+        currentStageIndex = min(max(currentStageIndex, 0), unlockedStageIndex)
+        monthIndex = max(0, monthIndex)
     }
 
     // MARK: - Codable
