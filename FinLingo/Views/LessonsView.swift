@@ -4,8 +4,7 @@
 //
 //  The left laptop's screen: bite-size money lessons. Each lesson teaches a concept,
 //  then checks it with a short run of mixed-format questions (multiple choice, true/false,
-//  tap-to-match pairs, and drag-into-buckets sorting); getting every question right on a
-//  lesson's first attempt pays out in-game cash that the player spends on room upgrades.
+//  and drag-into-buckets sorting); each question scores against the player's cash balance.
 //
 
 import SwiftUI
@@ -17,17 +16,9 @@ import SwiftUI
 enum QuestionKind {
     case multipleChoice(options: [String], correctIndex: Int)
     case trueFalse(correctAnswer: Bool)
-    /// Tap a left term, then its matching right term.
-    case matching(pairs: [MatchPair])
     /// Drag each item into the bucket it belongs to. `buckets` are the category labels;
     /// each item names the index of the bucket it belongs in.
     case categorize(items: [CategoryItem], buckets: [String])
-}
-
-struct MatchPair: Identifiable {
-    let id = UUID()
-    let left: String
-    let right: String
 }
 
 struct CategoryItem: Identifiable {
@@ -138,12 +129,8 @@ enum LessonContent {
                 ),
                 Question(
                     id: "compound_interest_q3",
-                    prompt: "Using the Rule of 72, match each return to how long it takes to double.",
-                    kind: .matching(pairs: [
-                        MatchPair(left: "6% / year", right: "~12 years"),
-                        MatchPair(left: "9% / year", right: "~8 years"),
-                        MatchPair(left: "12% / year", right: "~6 years"),
-                    ])
+                    prompt: "Using the Rule of 72, about how long does money at 9%/yr take to double?",
+                    kind: .multipleChoice(options: ["~4 years", "~8 years", "~16 years"], correctIndex: 1)
                 ),
             ],
             reward: 120,
@@ -195,12 +182,15 @@ enum LessonContent {
                 ),
                 Question(
                     id: "high_yield_savings_q2",
-                    prompt: "Match each account type to its typical yield.",
-                    kind: .matching(pairs: [
-                        MatchPair(left: "Checking account", right: "~0.01%"),
-                        MatchPair(left: "Normal savings", right: "~0.4%"),
-                        MatchPair(left: "High-yield savings", right: "~4–5%"),
-                    ])
+                    prompt: "Drag each place to park cash by how much interest it earns.",
+                    kind: .categorize(
+                        items: [
+                            CategoryItem(label: "Checking account", correctBucket: 0),
+                            CategoryItem(label: "Normal savings", correctBucket: 0),
+                            CategoryItem(label: "High-yield savings", correctBucket: 1),
+                        ],
+                        buckets: ["Low interest", "Earns ~4–5%"]
+                    )
                 ),
                 Question(
                     id: "high_yield_savings_q3",
@@ -543,8 +533,6 @@ private struct QuestionCard: View {
                 MultipleChoiceQuestion(options: options, correctIndex: correctIndex, palette: palette, onAnswered: onAnswered)
             case let .trueFalse(correctAnswer):
                 TrueFalseQuestion(correctAnswer: correctAnswer, palette: palette, onAnswered: onAnswered)
-            case let .matching(pairs):
-                MatchingQuestion(pairs: pairs, palette: palette, onAnswered: onAnswered)
             case let .categorize(items, buckets):
                 CategorizeQuestion(items: items, buckets: buckets, palette: palette, onAnswered: onAnswered)
             }
@@ -646,94 +634,6 @@ private struct TrueFalseQuestion: View {
         guard picked == nil else { return }
         picked = value
         onAnswered(value == correctAnswer)
-    }
-}
-
-// MARK: - Matching (tap a left term, then its right pair)
-
-private struct MatchingQuestion: View {
-    let pairs: [MatchPair]
-    let palette: TerminalPalette
-    let onAnswered: (Bool) -> Void
-
-    /// The right column, shuffled ONCE and held in state so re-renders don't reshuffle it
-    /// out from under the player mid-question (the original bug).
-    @State private var rightOrder: [MatchPair] = []
-    @State private var selectedLeft: MatchPair.ID?
-    @State private var matched: Set<MatchPair.ID> = []
-    /// Briefly set to a right id that was just mis-tapped, so we can flash it red.
-    @State private var wrongRight: MatchPair.ID?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Tap a term, then its match.")
-                .font(.system(.caption2, design: .monospaced)).foregroundColor(palette.dim)
-
-            HStack(alignment: .top, spacing: 10) {
-                VStack(spacing: 8) {
-                    ForEach(pairs) { pair in
-                        chip(pair.left,
-                             state: matched.contains(pair.id) ? .matched : (selectedLeft == pair.id ? .selected : .idle)) {
-                            guard !matched.contains(pair.id) else { return }
-                            selectedLeft = pair.id
-                        }
-                    }
-                }
-                VStack(spacing: 8) {
-                    ForEach(rightOrder) { pair in
-                        chip(pair.right,
-                             state: matched.contains(pair.id) ? .matched : (wrongRight == pair.id ? .wrong : .idle)) {
-                            tapRight(pair.id)
-                        }
-                    }
-                }
-            }
-        }
-        .onAppear { if rightOrder.isEmpty { rightOrder = pairs.shuffled() } }
-    }
-
-    private enum ChipState { case idle, selected, matched, wrong }
-
-    private func chip(_ text: String, state: ChipState, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Text(text).font(.system(.caption, design: .monospaced)).foregroundColor(palette.cream)
-                if state == .matched { Text("✓").foregroundColor(palette.term) }
-                Spacer(minLength: 0)
-            }
-            .padding(10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(background(for: state))
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.white.opacity(0.08), lineWidth: 1))
-        }
-        .buttonStyle(.clicky)
-        .disabled(state == .matched)
-    }
-
-    private func background(for state: ChipState) -> Color {
-        switch state {
-        case .idle:     return Color.white.opacity(0.035)
-        case .selected: return palette.amber.opacity(0.25)
-        case .matched:  return palette.term.opacity(0.18)
-        case .wrong:    return palette.bad.opacity(0.20)
-        }
-    }
-
-    private func tapRight(_ rightID: MatchPair.ID) {
-        guard let left = selectedLeft, !matched.contains(rightID) else { return }
-        if left == rightID {
-            matched.insert(left)
-            selectedLeft = nil
-            if matched.count == pairs.count { onAnswered(true) }
-        } else {
-            // Wrong pairing: flash the tapped right chip, then clear the selection.
-            selectedLeft = nil
-            wrongRight = rightID
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                if wrongRight == rightID { wrongRight = nil }
-            }
-        }
     }
 }
 
