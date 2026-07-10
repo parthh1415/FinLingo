@@ -56,7 +56,7 @@ enum TradingContent {
     ]
 }
 
-private enum SimTool { case trading, retirement, debt, emergency, grower }
+private enum SimTool { case futureYou, trading, retirement, debt, emergency, grower }
 
 struct SimulatorView: View {
     @ObservedObject var gameState: GameState
@@ -82,6 +82,8 @@ struct SimulatorView: View {
                 switch tool {
                 case .none:
                     toolHub
+                case .futureYou:
+                    FutureYouView(gameState: gameState) { tool = nil }
                 case .trading:
                     if let scenario = selected {
                         TradingSandbox(scenario: scenario, gameState: gameState) { selected = nil }
@@ -129,6 +131,7 @@ struct SimulatorView: View {
                 Text("> hands-on tools — practice what the Lessons teach")
                     .font(.system(.caption, design: .monospaced)).foregroundColor(term.opacity(0.9))
                     .frame(maxWidth: .infinity, alignment: .leading)
+                featuredCard("🔮 Future You", "See where your money moves take you by 65.") { tool = .futureYou }
                 toolCard("Trading sandbox", "Buy & sell real market history. Pairs with: investing.") { tool = .trading }
                 toolCard("401(k) calculator", "See your nest egg grow. Pairs with: compound interest.") { tool = .retirement }
                 toolCard("Invest $X/month", "Watch small monthly amounts snowball. Pairs with: saving.") { tool = .grower }
@@ -138,6 +141,25 @@ struct SimulatorView: View {
             .padding(16)
         }
         .frame(maxHeight: 440)
+    }
+
+    // A highlighted card for the headline "Future You" projection.
+    private func featuredCard(_ title: String, _ blurb: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(title).font(.system(.headline, design: .monospaced).weight(.bold)).foregroundColor(Color(red: 0.06, green: 0.08, blue: 0.09))
+                    Text(blurb).font(.system(.caption, design: .monospaced)).foregroundColor(Color(red: 0.06, green: 0.08, blue: 0.09).opacity(0.7))
+                }
+                Spacer()
+                Text("›").font(.system(.title2, design: .monospaced).weight(.bold)).foregroundColor(Color(red: 0.06, green: 0.08, blue: 0.09))
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(amber)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     private func toolCard(_ title: String, _ blurb: String, action: @escaping () -> Void) -> some View {
