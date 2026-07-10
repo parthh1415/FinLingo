@@ -129,6 +129,7 @@ struct TitleView: View {
         VStack(spacing: 5) {
             Button(action: action) {
                 icon()
+                    .opacity(enabled ? 1 : 0.4)
                     .frame(width: 58, height: 52)
                     .background(enabled ? panelEdge.opacity(0.9) : panelEdge.opacity(0.4))
                     .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
@@ -337,7 +338,6 @@ private struct HeroScene: View {
         r(ctx, s, 42, 48, 14, 10, Color(red: 0.53, green: 0.74, blue: 0.83))
         r(ctx, s, 48, 48, 1, 10, woodDk); r(ctx, s, 42, 52, 14, 1, woodDk)
         r(ctx, s, 92, 46, 13, 9, Color(red: 0.95, green: 0.90, blue: 0.72))
-        r(ctx, s, 92, 46, 13, 9, .clear)
         ctx.stroke(Path(CGRect(x: 92 * s, y: 46 * s, width: 13 * s, height: 9 * s)), with: .color(Color(red: 0.86, green: 0.68, blue: 0.34)), lineWidth: 1)
 
         // Beds — blue (left), green (right).
@@ -405,7 +405,6 @@ private struct HeroScene: View {
             for i in 0..<count {
                 let y = 116 - Double(i) * 3.4
                 oval(ctx, s, bx, y, 15, 5, i == count - 1 ? goldHi : gold)
-                oval(ctx, s, bx, y, 15, 5, .clear)
                 ctx.stroke(Path(ellipseIn: CGRect(x: bx * s, y: y * s, width: 15 * s, height: 5 * s)), with: .color(goldDk), lineWidth: 0.6)
             }
             // $ on the top coin.

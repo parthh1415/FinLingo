@@ -14,6 +14,9 @@ struct LifeEvent: Identifiable {
     let title: String
     let detail: String
     let choices: [Choice]
+    /// Recurring events (hazards you face again and again) may fire more than once; one-time
+    /// events grant a permanent gain and must never re-pay, so they're consumed for good.
+    var recurring: Bool = true
 
     struct Choice: Identifiable {
         let id = UUID()
@@ -41,14 +44,14 @@ enum LifeEventCatalog {
                   choices: [
                     .init(label: "Counter with market research", outcome: "You landed a real raise. First salaries compound for a whole career.", income: 450),
                     .init(label: "Just take the 2%", outcome: "Safe, but you left money on the table.", income: 90),
-                  ]),
+                  ], recurring: false),   // a permanent raise — once per run
         LifeEvent(id: "bonus", emoji: "🎁", title: "Surprise bonus!",
                   detail: "$1,500 lands in your account. What now?",
                   choices: [
                     .init(label: "Invest all of it", outcome: "Future-you says thanks — that's decades of compounding.", invested: 1500),
                     .init(label: "Split it 50/50", outcome: "A little joy, a little growth. Balanced.", cash: 750, invested: 750),
                     .init(label: "Treat yourself", outcome: "Fun! But it's gone — nothing compounds.", cash: 1500),
-                  ]),
+                  ], recurring: false),   // a one-off windfall — don't re-pay it
         LifeEvent(id: "phone", emoji: "📱", title: "Your phone dies",
                   detail: "Time for a new one. Which do you get?",
                   choices: [
@@ -78,6 +81,6 @@ enum LifeEventCatalog {
                   choices: [
                     .init(label: "Enroll and grab the match", outcome: "Free money — the best return you'll ever get.", invested: 1200),
                     .init(label: "Skip it for now", outcome: "You left the free match on the table.", cash: 0),
-                  ]),
+                  ], recurring: false),   // enrolling is a one-time event
     ]
 }

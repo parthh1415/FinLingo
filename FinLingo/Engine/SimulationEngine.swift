@@ -21,7 +21,6 @@ final class SimulationEngine: ObservableObject {
     private let gameState: GameState
     private var cancellable: AnyCancellable?
     private var accumulator: Double = 0
-    private var usedEventIds: Set<String> = []
 
     private let secondsPerMonth: Double = 5.0
     private let tickInterval: Double = 0.1
@@ -114,21 +113,24 @@ final class SimulationEngine: ObservableObject {
     /// straight from the tour into a hands-on decision instead of an idle wait.
     func beginFirstScenario() {
         guard pendingEvent == nil else { return }
-        let starter = LifeEventCatalog.all.first { !usedEventIds.contains($0.id) } ?? LifeEventCatalog.all.first
-        pendingEvent = starter
+        pendingEvent = availableEvents.first ?? LifeEventCatalog.all.first
     }
 
     private func maybeTriggerEvent() {
         guard monthIndex > 0, monthIndex % eventEveryMonths == 0 else { return }
-        var available = LifeEventCatalog.all.filter { !usedEventIds.contains($0.id) }
-        // Recycle the catalog once it's exhausted so events keep coming for the full run.
-        if available.isEmpty { usedEventIds.removeAll(); available = LifeEventCatalog.all }
-        guard let event = available.randomElement() else { return }
+        guard let event = availableEvents.randomElement() else { return }
         pendingEvent = event
+    }
+
+    /// Events eligible to fire now: recurring hazards always, one-time gains only until consumed.
+    private var availableEvents: [LifeEvent] {
+        LifeEventCatalog.all.filter { $0.recurring || !gameState.usedEvents.contains($0.id) }
     }
 
     /// Apply a chosen outcome, then resume the clock.
     func resolve(_ choice: LifeEvent.Choice) {
+        guard let event = pendingEvent else { return }   // ignore a double-tap on CONTINUE
+
         var cash = gameState.cash + choice.cash
         if cash < 0 { gameState.debt += -cash; cash = 0 }
         gameState.cash = cash
@@ -136,7 +138,8 @@ final class SimulationEngine: ObservableObject {
         gameState.monthlyIncome = max(0, gameState.monthlyIncome + choice.income)
         gameState.investedBalance = max(0, gameState.investedBalance + choice.invested)
 
-        if let id = pendingEvent?.id { usedEventIds.insert(id) }
+        // Consume one-time events for good so their permanent gains can never re-pay.
+        if !event.recurring { gameState.usedEvents.insert(event.id) }
         PersistenceController.save(gameState)
         pendingEvent = nil
     }

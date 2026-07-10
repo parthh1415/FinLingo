@@ -158,6 +158,10 @@ struct GameView: View {
             switch phase {
             case .active:
                 creditOfflineEarnings()
+                // SpriteView can un-pause its scene across background→foreground; re-assert the
+                // freeze so time doesn't resume behind a still-open panel/modal.
+                sim.isSuspended = gameCovered
+                scene.isPaused = gameCovered
             case .background:
                 gameState.lastSeen = Date()
                 PersistenceController.save(gameState)

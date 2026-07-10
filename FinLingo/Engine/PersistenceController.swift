@@ -55,8 +55,9 @@ enum PersistenceController {
         }
     }
 
-    /// Removes the save file if present (useful for tests/reset).
+    /// Removes the save file and any quarantined copy — a clean wipe (reset / "erase progress").
     static func clear() {
         try? FileManager.default.removeItem(at: saveURL)
+        try? FileManager.default.removeItem(at: saveURL.appendingPathExtension("corrupt"))
     }
 }

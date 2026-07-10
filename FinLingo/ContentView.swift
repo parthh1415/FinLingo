@@ -22,8 +22,8 @@ struct ContentView: View {
                 TitleView(
                     hasSave: $hasSave,
                     onNewLife: {
-                        PersistenceController.clear()
-                        hasSave = false
+                        // Don't wipe yet — onboarding overwrites the save when it finishes, so an
+                        // abandoned new-life leaves the old save intact and loadable.
                         route = .onboarding
                     },
                     onLoad: { route = .game }
