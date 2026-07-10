@@ -11,6 +11,8 @@ final class PlayerNode: SKSpriteNode {
     private(set) var facingDirection: Direction = .down
     private var isWalking = false
     private let playerSize = CGSize(width: 18, height: 26)
+    /// Renders the 18×26 art a touch larger on screen; nearest-neighbor keeps the pixels crisp.
+    private let displayScale: CGFloat = 1.3
 
     init() {
         let texture = PixelArtStyle.loadPixelTexture(named: "player_down_idle", size: playerSize)
@@ -18,6 +20,7 @@ final class PlayerNode: SKSpriteNode {
         name = "player"
         zPosition = PixelArtStyle.Layer.player
         anchorPoint = CGPoint(x: 0.5, y: 0.28)
+        setScale(displayScale)
         physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: 14, height: 10), center: CGPoint(x: 0, y: 4))
         physicsBody?.categoryBitMask = PhysicsCategory.player
         physicsBody?.collisionBitMask = PhysicsCategory.wall | PhysicsCategory.furniture
