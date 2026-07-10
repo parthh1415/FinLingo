@@ -2,23 +2,26 @@
 //  LessonsView.swift
 //  FinLingo
 //
-//  The left laptop's screen: bite-size money lessons. Each lesson teaches a concept,
-//  then checks it with a short run of mixed-format questions (multiple choice, true/false,
-//  and drag-into-buckets sorting); each question scores against the player's cash balance.
+//  The left laptop's screen: bite-size money lessons. Each lesson teaches a concept — and the
+//  teaching text always contains the facts needed to answer — then checks it with a short run
+//  of three question types: multiple choice (click), drag-into-buckets (sort), and tap-to-match
+//  pairs. Every question scores against the player's cash balance. A "Practice this" link deep-
+//  links to the matching hands-on tool on the Simulator laptop.
 //
 
 import SwiftUI
 
 // MARK: - Question model
 
-/// The interaction style for a single question. Mirrors Duolingo's mix of formats so
-/// Learn Mode isn't just a wall of multiple-choice.
+/// The interaction style for a single question. The dorm level uses exactly three: a click
+/// (multiple choice), a drag (categorize into buckets), and a tap-to-match.
 enum QuestionKind {
     case multipleChoice(options: [String], correctIndex: Int)
-    case trueFalse(correctAnswer: Bool)
     /// Drag each item into the bucket it belongs to. `buckets` are the category labels;
     /// each item names the index of the bucket it belongs in.
     case categorize(items: [CategoryItem], buckets: [String])
+    /// Tap a left term, then its matching right term.
+    case matching(pairs: [MatchPair])
 }
 
 struct CategoryItem: Identifiable {
@@ -28,10 +31,22 @@ struct CategoryItem: Identifiable {
     let correctBucket: Int
 }
 
+struct MatchPair: Identifiable {
+    let id = UUID()
+    let left: String
+    let right: String
+}
+
 struct Question: Identifiable {
     let id: String
     let prompt: String
     let kind: QuestionKind
+}
+
+/// A deep link from a lesson to the matching hands-on Simulator tool.
+struct PracticeLink {
+    let label: String
+    let tool: SimTool
 }
 
 struct Lesson: Identifiable {
@@ -41,7 +56,7 @@ struct Lesson: Identifiable {
     let teach: String
     let questions: [Question]
     let reward: Double
-    var practiceHint: String? = nil // points to the matching Simulator tool
+    var practice: PracticeLink? = nil // opens the matching Simulator tool
 }
 
 enum LessonContent {
@@ -50,11 +65,11 @@ enum LessonContent {
             id: "budget_503020",
             topic: "BUDGETING",
             title: "The 50/30/20 rule",
-            teach: "A simple way to split your take-home pay: 50% to needs (rent, food, bills), 30% to wants, and 20% to savings and paying down debt.",
+            teach: "Split your take-home pay three ways: 50% to needs (rent, food, bills), 30% to wants (dining out, subscriptions, fun), and 20% to savings and paying off debt. On $3,000 take-home that's $1,500 to needs, $900 to wants, and $600 to savings + debt.",
             questions: [
                 Question(
                     id: "budget_503020_q1",
-                    prompt: "With $3,000 take-home a month, how much should go to savings + debt?",
+                    prompt: "With $3,000 take-home a month, how much should go to savings + debt (the 20%)?",
                     kind: .multipleChoice(options: ["$300", "$600", "$900"], correctIndex: 1)
                 ),
                 Question(
@@ -72,8 +87,12 @@ enum LessonContent {
                 ),
                 Question(
                     id: "budget_503020_q3",
-                    prompt: "True or false: the 50/30/20 rule gives needs the smallest share of the budget.",
-                    kind: .trueFalse(correctAnswer: false)
+                    prompt: "Match each slice of the rule to its share of your pay.",
+                    kind: .matching(pairs: [
+                        MatchPair(left: "Needs", right: "50%"),
+                        MatchPair(left: "Wants", right: "30%"),
+                        MatchPair(left: "Savings & debt", right: "20%"),
+                    ])
                 ),
             ],
             reward: 90
@@ -82,11 +101,11 @@ enum LessonContent {
             id: "emergency_fund",
             topic: "SAFETY NET",
             title: "Emergency fund",
-            teach: "Before investing heavily, keep 3–6 months of essential expenses somewhere safe and easy to reach. It stops one bad month from becoming debt.",
+            teach: "Keep 3–6 months of essential expenses somewhere safe and easy to reach before investing heavily. If your essentials are $2,000 a month, a 3-month cushion is $6,000. It's for genuine emergencies — a job loss, a medical bill, a broken-down car — not planned wants like a sale or a trip.",
             questions: [
                 Question(
                     id: "emergency_fund_q1",
-                    prompt: "Your essentials are $2,000/mo. A solid starter emergency fund is about:",
+                    prompt: "Your essentials are $2,000/mo. A solid 3-month emergency fund is about:",
                     kind: .multipleChoice(options: ["$500", "$1,000", "$6,000"], correctIndex: 2)
                 ),
                 Question(
@@ -104,18 +123,22 @@ enum LessonContent {
                 ),
                 Question(
                     id: "emergency_fund_q3",
-                    prompt: "True or false: your emergency fund should be invested in the stock market so it grows faster.",
-                    kind: .trueFalse(correctAnswer: false)
+                    prompt: "Match each monthly essentials figure to its 3-month target.",
+                    kind: .matching(pairs: [
+                        MatchPair(left: "$1,000/mo", right: "$3,000"),
+                        MatchPair(left: "$2,000/mo", right: "$6,000"),
+                        MatchPair(left: "$3,000/mo", right: "$9,000"),
+                    ])
                 ),
             ],
             reward: 90,
-            practiceHint: "↳ Practice this: Simulator › Emergency fund"
+            practice: PracticeLink(label: "Emergency fund", tool: .emergency)
         ),
         Lesson(
             id: "compound_interest",
             topic: "INVESTING",
             title: "Compound interest",
-            teach: "Your earnings earn their own earnings. Time is the biggest lever — money left to grow snowballs. Rule of 72: 72 ÷ return ≈ years to double.",
+            teach: "Your earnings earn their own earnings, so money snowballs the longer it grows. Rule of 72: divide 72 by your yearly return to estimate the years to double — at 8% that's about 9 years, at 9% about 8 years. Leave it invested to compound; pulling out early or starting late resets the snowball.",
             questions: [
                 Question(
                     id: "compound_interest_q1",
@@ -124,23 +147,35 @@ enum LessonContent {
                 ),
                 Question(
                     id: "compound_interest_q2",
-                    prompt: "True or false: starting to invest 10 years earlier, even with less money, often beats starting later with more.",
-                    kind: .trueFalse(correctAnswer: true)
+                    prompt: "Using the Rule of 72, match each yearly return to how long it takes to double.",
+                    kind: .matching(pairs: [
+                        MatchPair(left: "6% / year", right: "~12 years"),
+                        MatchPair(left: "9% / year", right: "~8 years"),
+                        MatchPair(left: "12% / year", right: "~6 years"),
+                    ])
                 ),
                 Question(
                     id: "compound_interest_q3",
-                    prompt: "Using the Rule of 72, about how long does money at 9%/yr take to double?",
-                    kind: .multipleChoice(options: ["~4 years", "~8 years", "~16 years"], correctIndex: 1)
+                    prompt: "Drag each habit to whether it helps or hurts compounding.",
+                    kind: .categorize(
+                        items: [
+                            CategoryItem(label: "Start early", correctBucket: 0),
+                            CategoryItem(label: "Leave it invested", correctBucket: 0),
+                            CategoryItem(label: "Cash out early", correctBucket: 1),
+                            CategoryItem(label: "Wait 10 years to start", correctBucket: 1),
+                        ],
+                        buckets: ["Helps", "Hurts"]
+                    )
                 ),
             ],
             reward: 120,
-            practiceHint: "↳ Practice this: Simulator › 401(k) calculator"
+            practice: PracticeLink(label: "401(k) calculator", tool: .retirement)
         ),
         Lesson(
             id: "credit_utilization",
             topic: "CREDIT",
             title: "Using credit well",
-            teach: "Keep your card balance under ~30% of the limit and pay in full each month. That builds your score and dodges interest.",
+            teach: "Keep your card balance under about 30% of its limit and pay it off in full every month. On a $1,000 limit that means staying under $300. Low utilization and on-time, in-full payments build your score; maxing the card out or missing payments drags it down and piles on interest.",
             questions: [
                 Question(
                     id: "credit_utilization_q1",
@@ -162,18 +197,22 @@ enum LessonContent {
                 ),
                 Question(
                     id: "credit_utilization_q3",
-                    prompt: "True or false: carrying a balance instead of paying in full helps your credit score grow faster.",
-                    kind: .trueFalse(correctAnswer: false)
+                    prompt: "Match each card limit to its healthy balance cap (30%).",
+                    kind: .matching(pairs: [
+                        MatchPair(left: "$1,000 limit", right: "under $300"),
+                        MatchPair(left: "$2,000 limit", right: "under $600"),
+                        MatchPair(left: "$3,000 limit", right: "under $900"),
+                    ])
                 ),
             ],
             reward: 90,
-            practiceHint: "↳ Practice this: Simulator › Debt payoff"
+            practice: PracticeLink(label: "Debt payoff", tool: .debt)
         ),
         Lesson(
             id: "high_yield_savings",
             topic: "SAVING",
             title: "Make idle cash work",
-            teach: "A high-yield savings account pays roughly 10× a normal one — and it's just as safe and reachable. It's the natural home for your emergency fund.",
+            teach: "A high-yield savings account pays roughly 10× a normal one — around 4–5% versus 0.4% — and it's just as safe (FDIC-insured) and reachable. Checking earns almost nothing (~0.01%). $5,000 at 4% earns about $200 a year. It's the natural home for your emergency fund.",
             questions: [
                 Question(
                     id: "high_yield_savings_q1",
@@ -194,18 +233,22 @@ enum LessonContent {
                 ),
                 Question(
                     id: "high_yield_savings_q3",
-                    prompt: "True or false: a high-yield savings account is FDIC-insured just like a normal savings account.",
-                    kind: .trueFalse(correctAnswer: true)
+                    prompt: "Match each account type to its typical yield.",
+                    kind: .matching(pairs: [
+                        MatchPair(left: "Checking", right: "~0.01%"),
+                        MatchPair(left: "Normal savings", right: "~0.4%"),
+                        MatchPair(left: "High-yield savings", right: "~4–5%"),
+                    ])
                 ),
             ],
             reward: 90,
-            practiceHint: "↳ Practice this: Simulator › Invest $X/month"
+            practice: PracticeLink(label: "Invest $X/month", tool: .grower)
         ),
         Lesson(
             id: "negotiation",
             topic: "EARNING",
             title: "Negotiating your pay",
-            teach: "Your first salary sets the base every future raise builds on. Counter once, politely, with a number backed by market research — small differences compound over a career.",
+            teach: "Your first salary is the base every future raise builds on, so a small bump compounds over a career — $5,000 more can add $200,000+ over 40 years. Research the market rate for the role, let them make the first offer, then counter once, politely, with a number. Grabbing the first offer or making ultimatums usually costs you.",
             questions: [
                 Question(
                     id: "negotiation_q1",
@@ -227,8 +270,12 @@ enum LessonContent {
                 ),
                 Question(
                     id: "negotiation_q3",
-                    prompt: "True or false: you should always accept the first offer to avoid seeming difficult.",
-                    kind: .trueFalse(correctAnswer: false)
+                    prompt: "Match each term to what it means in a negotiation.",
+                    kind: .matching(pairs: [
+                        MatchPair(left: "Base salary", right: "what raises build on"),
+                        MatchPair(left: "Counter-offer", right: "your one polite ask"),
+                        MatchPair(left: "Market rate", right: "researched fair pay"),
+                    ])
                 ),
             ],
             reward: 120
@@ -260,6 +307,8 @@ enum LessonContent {
 
 struct LessonsView: View {
     @ObservedObject var gameState: GameState
+    /// Opens the matching hands-on tool on the Simulator laptop (from a "Practice this" link).
+    var onPractice: (SimTool) -> Void
     var onClose: () -> Void
 
     @State private var selected: Lesson?
@@ -280,7 +329,7 @@ struct LessonsView: View {
                 titleBar
                 Rectangle().fill(edge.opacity(0.35)).frame(height: 1)
                 if let lesson = selected {
-                    LessonDetail(lesson: lesson, gameState: gameState, palette: palette) { selected = nil }
+                    LessonDetail(lesson: lesson, gameState: gameState, palette: palette, onPractice: onPractice) { selected = nil }
                         .id(lesson.id) // fresh @State every time a lesson is (re)opened
                 } else {
                     lessonList
@@ -373,6 +422,7 @@ private struct LessonDetail: View {
     let lesson: Lesson
     @ObservedObject var gameState: GameState
     let palette: TerminalPalette
+    var onPractice: (SimTool) -> Void
     var onBack: () -> Void
 
     /// Index of the question currently on screen. `== lesson.questions.count` means the
@@ -398,8 +448,14 @@ private struct LessonDetail: View {
                 Text(lesson.title).font(.system(.title3, design: .monospaced).weight(.bold)).foregroundColor(palette.cream)
                 Text(lesson.teach).font(.system(.subheadline, design: .monospaced)).foregroundColor(palette.cream.opacity(0.85)).lineSpacing(3)
 
-                if let hint = lesson.practiceHint {
-                    Text(hint).font(.system(.caption, design: .monospaced)).foregroundColor(palette.term)
+                if let practice = lesson.practice {
+                    Button { onPractice(practice.tool) } label: {
+                        Text("↳ Practice this: \(practice.label) ›")
+                            .font(.system(.caption, design: .monospaced).weight(.bold))
+                            .foregroundColor(palette.term)
+                            .underline()
+                    }
+                    .buttonStyle(.clicky)
                 }
 
                 progressDots
@@ -531,10 +587,10 @@ private struct QuestionCard: View {
             switch question.kind {
             case let .multipleChoice(options, correctIndex):
                 MultipleChoiceQuestion(options: options, correctIndex: correctIndex, palette: palette, onAnswered: onAnswered)
-            case let .trueFalse(correctAnswer):
-                TrueFalseQuestion(correctAnswer: correctAnswer, palette: palette, onAnswered: onAnswered)
             case let .categorize(items, buckets):
                 CategorizeQuestion(items: items, buckets: buckets, palette: palette, onAnswered: onAnswered)
+            case let .matching(pairs):
+                MatchingQuestion(pairs: pairs, palette: palette, onAnswered: onAnswered)
             }
         }
     }
@@ -584,56 +640,6 @@ private struct MultipleChoiceQuestion: View {
         guard picked == nil else { return }
         picked = index
         onAnswered(index == correctIndex)
-    }
-}
-
-// MARK: - True / false
-
-private struct TrueFalseQuestion: View {
-    let correctAnswer: Bool
-    let palette: TerminalPalette
-    let onAnswered: (Bool) -> Void
-
-    @State private var picked: Bool?
-
-    var body: some View {
-        HStack(spacing: 10) {
-            option(true, label: "TRUE")
-            option(false, label: "FALSE")
-        }
-    }
-
-    private func option(_ value: Bool, label: String) -> some View {
-        Button { pick(value) } label: {
-            HStack {
-                Spacer()
-                Text(label).font(.system(.subheadline, design: .monospaced).weight(.bold)).foregroundColor(palette.cream)
-                if let picked, picked == value {
-                    Text(value == correctAnswer ? "✓" : "✗")
-                        .foregroundColor(value == correctAnswer ? palette.term : palette.bad)
-                }
-                Spacer()
-            }
-            .padding(12)
-            .background(background(for: value))
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.white.opacity(0.08), lineWidth: 1))
-        }
-        .buttonStyle(.clicky)
-        .disabled(picked != nil)
-    }
-
-    private func background(for value: Bool) -> Color {
-        guard let picked else { return Color.white.opacity(0.035) }
-        if value == correctAnswer { return palette.term.opacity(0.18) }
-        if value == picked { return palette.bad.opacity(0.18) }
-        return Color.white.opacity(0.035)
-    }
-
-    private func pick(_ value: Bool) {
-        guard picked == nil else { return }
-        picked = value
-        onAnswered(value == correctAnswer)
     }
 }
 
@@ -778,5 +784,93 @@ private struct CategorizeQuestion: View {
         let correct = items.allSatisfy { placement[$0.id] == $0.correctBucket }
         resolved = correct
         onAnswered(correct)
+    }
+}
+
+// MARK: - Matching (tap a term, then its match; matched pairs share a numbered badge)
+
+private struct MatchingQuestion: View {
+    let pairs: [MatchPair]
+    let palette: TerminalPalette
+    let onAnswered: (Bool) -> Void
+
+    /// The right column, shuffled ONCE and held in state so re-renders don't reshuffle it
+    /// out from under the player mid-question.
+    @State private var rightOrder: [MatchPair] = []
+    /// The currently selected left term, waiting for a right term to be tapped.
+    @State private var selectedLeft: MatchPair.ID?
+    /// pair id -> the badge number (1, 2, 3…) assigned when it was matched. A matched left and
+    /// its right share the same number, so the link between the two columns is obvious.
+    @State private var matchNumber: [MatchPair.ID: Int] = [:]
+    /// Briefly set to a right id that was just mis-tapped, so we can flash it red.
+    @State private var wrongRight: MatchPair.ID?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Tap a term on the left, then its match on the right.")
+                .font(.system(.caption2, design: .monospaced)).foregroundColor(palette.dim)
+
+            HStack(alignment: .top, spacing: 10) {
+                VStack(spacing: 8) {
+                    ForEach(pairs) { pair in
+                        chip(pair.left, badge: matchNumber[pair.id],
+                             selected: selectedLeft == pair.id, wrong: false) {
+                            guard matchNumber[pair.id] == nil else { return }
+                            selectedLeft = pair.id
+                        }
+                    }
+                }
+                VStack(spacing: 8) {
+                    ForEach(rightOrder) { pair in
+                        chip(pair.right, badge: matchNumber[pair.id],
+                             selected: false, wrong: wrongRight == pair.id) {
+                            tapRight(pair.id)
+                        }
+                    }
+                }
+            }
+        }
+        .onAppear { if rightOrder.isEmpty { rightOrder = pairs.shuffled() } }
+    }
+
+    private func chip(_ text: String, badge: Int?, selected: Bool, wrong: Bool, action: @escaping () -> Void) -> some View {
+        let matched = badge != nil
+        return Button(action: action) {
+            HStack(spacing: 6) {
+                if let badge {
+                    Text("\(badge)")
+                        .font(.system(.caption2, design: .monospaced).weight(.bold))
+                        .foregroundColor(palette.screen)
+                        .frame(width: 18, height: 18)
+                        .background(Circle().fill(palette.term))
+                }
+                Text(text).font(.system(.caption, design: .monospaced)).foregroundColor(palette.cream)
+                Spacer(minLength: 0)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(matched ? palette.term.opacity(0.15) : wrong ? palette.bad.opacity(0.20) : Color.white.opacity(0.04))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(selected ? palette.amber : Color.white.opacity(0.10), lineWidth: selected ? 2 : 1))
+        }
+        .buttonStyle(.clicky)
+        .disabled(matched)
+    }
+
+    private func tapRight(_ rightID: MatchPair.ID) {
+        guard let left = selectedLeft, matchNumber[rightID] == nil else { return }
+        if left == rightID {
+            matchNumber[left] = matchNumber.count + 1
+            selectedLeft = nil
+            if matchNumber.count == pairs.count { onAnswered(true) }
+        } else {
+            // Wrong pairing: flash the tapped right chip, then clear the selection.
+            selectedLeft = nil
+            wrongRight = rightID
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                if wrongRight == rightID { wrongRight = nil }
+            }
+        }
     }
 }

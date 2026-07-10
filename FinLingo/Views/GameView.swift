@@ -11,6 +11,10 @@ final class GameUIState: ObservableObject {
     @Published var showMarketplace = false
     @Published var welcomeBackAmount: Double = 0
 
+    /// When a lesson's "Practice this" link opens the Simulator, this names the tool it should
+    /// jump straight to. Cleared whenever panels close so a normal open lands on the hub.
+    @Published var pendingSimTool: SimTool?
+
     /// Close any open panel — used before showing the welcome-back popup so modals never stack.
     func closePanels() {
         showLessons = false
@@ -18,6 +22,7 @@ final class GameUIState: ObservableObject {
         showCareer = false
         showBudget = false
         showMarketplace = false
+        pendingSimTool = nil
     }
 }
 
@@ -90,10 +95,14 @@ struct GameView: View {
 
             // Overlays
             if ui.showLessons {
-                LessonsView(gameState: gameState) { ui.showLessons = false }
+                LessonsView(gameState: gameState, onPractice: { tool in
+                    ui.closePanels()
+                    ui.pendingSimTool = tool
+                    ui.showSimulator = true
+                }) { ui.showLessons = false }
             }
             if ui.showSimulator {
-                SimulatorView(gameState: gameState) { ui.showSimulator = false }
+                SimulatorView(gameState: gameState, initialTool: ui.pendingSimTool) { ui.showSimulator = false }
             }
             if ui.showCareer {
                 CareerView(gameState: gameState) { ui.showCareer = false }

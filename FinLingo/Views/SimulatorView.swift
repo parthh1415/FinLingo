@@ -57,7 +57,9 @@ enum TradingContent {
     ]
 }
 
-private enum SimTool { case futureYou, trading, retirement, debt, emergency, grower }
+/// The hands-on tools on the right laptop. Internal (not file-private) so Lessons can deep-link
+/// a "Practice this" button straight to the matching tool.
+enum SimTool { case futureYou, trading, retirement, debt, emergency, grower }
 
 struct SimulatorView: View {
     @ObservedObject var gameState: GameState
@@ -65,6 +67,15 @@ struct SimulatorView: View {
 
     @State private var tool: SimTool?
     @State private var selected: TradeScenario?
+
+    /// `initialTool` lets a caller (e.g. a lesson's "Practice this" link) open the Simulator
+    /// already showing a specific tool instead of the hub.
+    init(gameState: GameState, initialTool: SimTool? = nil, onClose: @escaping () -> Void) {
+        self.gameState = gameState
+        self.onClose = onClose
+        _tool = State(initialValue: initialTool)
+        _selected = State(initialValue: nil)
+    }
 
     private let screen = Color(red: 0.055, green: 0.075, blue: 0.09)
     private let edge = Color(red: 0.83, green: 0.66, blue: 0.33)
