@@ -42,6 +42,8 @@ final class GameState: ObservableObject, Codable {
     @Published var investAllocation: Double
     /// The invested pot, which compounds over time. Part of net worth.
     @Published var investedBalance: Double
+    /// A rolling sample of net worth over time, used to draw the shareable progress curve.
+    @Published var netWorthHistory: [Double]
 
     /// Everything the player is worth: spendable cash plus investments.
     var netWorth: Double { cash + investedBalance }
@@ -63,7 +65,8 @@ final class GameState: ObservableObject, Codable {
         sideHustles: [String] = [],
         negotiationDone: Bool = false,
         investAllocation: Double = 0,
-        investedBalance: Double = 0
+        investedBalance: Double = 0,
+        netWorthHistory: [Double] = []
     ) {
         self.companyName = companyName
         self.cash = cash
@@ -82,6 +85,7 @@ final class GameState: ObservableObject, Codable {
         self.negotiationDone = negotiationDone
         self.investAllocation = investAllocation
         self.investedBalance = investedBalance
+        self.netWorthHistory = netWorthHistory
     }
 
     // MARK: - Convenience
@@ -103,7 +107,7 @@ final class GameState: ObservableObject, Codable {
         case completedLessons, completedChallenges
         case hasOnboarded, monthlyIncome, monthlySpending, goals, household
         case sideHustles, negotiationDone
-        case investAllocation, investedBalance
+        case investAllocation, investedBalance, netWorthHistory
     }
 
     convenience init(from decoder: Decoder) throws {
@@ -126,7 +130,8 @@ final class GameState: ObservableObject, Codable {
             sideHustles: try c.decodeIfPresent([String].self, forKey: .sideHustles) ?? [],
             negotiationDone: try c.decodeIfPresent(Bool.self, forKey: .negotiationDone) ?? false,
             investAllocation: try c.decodeIfPresent(Double.self, forKey: .investAllocation) ?? 0,
-            investedBalance: try c.decodeIfPresent(Double.self, forKey: .investedBalance) ?? 0
+            investedBalance: try c.decodeIfPresent(Double.self, forKey: .investedBalance) ?? 0,
+            netWorthHistory: try c.decodeIfPresent([Double].self, forKey: .netWorthHistory) ?? []
         )
     }
 
@@ -149,5 +154,6 @@ final class GameState: ObservableObject, Codable {
         try c.encode(negotiationDone, forKey: .negotiationDone)
         try c.encode(investAllocation, forKey: .investAllocation)
         try c.encode(investedBalance, forKey: .investedBalance)
+        try c.encode(netWorthHistory, forKey: .netWorthHistory)
     }
 }

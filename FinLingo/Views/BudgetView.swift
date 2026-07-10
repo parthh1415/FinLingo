@@ -32,6 +32,8 @@ struct BudgetView: View {
     @ObservedObject var gameState: GameState
     var onClose: () -> Void
 
+    @State private var showShare = false
+
     private let screen = Color(red: 0.055, green: 0.075, blue: 0.09)
     private let edge = Color(red: 0.83, green: 0.66, blue: 0.33)
     private let cream = Color(red: 0.96, green: 0.90, blue: 0.70)
@@ -55,6 +57,10 @@ struct BudgetView: View {
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(edge.opacity(0.75), lineWidth: 2))
             .contentShape(Rectangle()).onTapGesture { }
             .padding(.horizontal, 20)
+
+            if showShare {
+                ShareProgressView(gameState: gameState) { showShare = false }
+            }
         }
         .font(.system(.body, design: .monospaced))
     }
@@ -80,6 +86,19 @@ struct BudgetView: View {
                     Spacer()
                     stat("INVESTED", CurrencyFormat.short(gameState.investedBalance), term)
                 }
+
+                Button { showShare = true } label: {
+                    Label("Share my progress", systemImage: "square.and.arrow.up")
+                        .font(.system(.caption, design: .monospaced).weight(.bold))
+                        .foregroundColor(Color(red: 0.06, green: 0.08, blue: 0.09))
+                        .frame(maxWidth: .infinity, minHeight: 38)
+                        .background(term)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+
+                peerBanner
+
                 Text("Your invested share grows ~10%/yr. Pick a plan:")
                     .font(.system(.caption, design: .monospaced)).foregroundColor(dim)
 
@@ -100,6 +119,35 @@ struct BudgetView: View {
         }
     }
 
+    // Anonymized "you're not alone" social proof for the player's income band.
+    private var peerBanner: some View {
+        let s = PeerInsights.split(forIncome: gameState.monthlyIncome)
+        return VStack(alignment: .leading, spacing: 6) {
+            Text("🌐 Peers earning \(s.band) chose:")
+                .font(.system(.caption, design: .monospaced)).foregroundColor(term)
+            HStack(spacing: 6) {
+                peerPct("Paycheck", s.survive, id: "survive")
+                peerPct("50/30/20", s.balanced, id: "503020")
+                peerPct("Builder", s.builder, id: "builder")
+            }
+        }
+        .padding(12)
+        .background(Color.white.opacity(0.03))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private func peerPct(_ label: String, _ pct: Int, id: String) -> some View {
+        let top = PeerInsights.mostPopularId(forIncome: gameState.monthlyIncome) == id
+        return VStack(spacing: 2) {
+            Text("\(pct)%").font(.system(.subheadline, design: .monospaced).weight(.bold)).foregroundColor(top ? amber : cream)
+            Text(label).font(.system(size: 9, design: .monospaced)).foregroundColor(dim)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 6)
+        .background(top ? amber.opacity(0.12) : Color.white.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+    }
+
     private func strategyCard(_ strategy: BudgetStrategy) -> some View {
         let selected = abs(gameState.investAllocation - strategy.investAllocation) < 0.001
         return VStack(alignment: .leading, spacing: 8) {
@@ -115,11 +163,20 @@ struct BudgetView: View {
                 split("Save", strategy.save)
                 split("Invest", strategy.invest)
             }
+            peerProof(for: strategy)
         }
         .padding(12)
         .background(selected ? amber.opacity(0.14) : Color.white.opacity(0.035))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(selected ? amber.opacity(0.6) : Color.white.opacity(0.06), lineWidth: 1))
+    }
+
+    private func peerProof(for strategy: BudgetStrategy) -> some View {
+        let pct = PeerInsights.pct(forIncome: gameState.monthlyIncome, strategyId: strategy.id)
+        let top = PeerInsights.mostPopularId(forIncome: gameState.monthlyIncome) == strategy.id
+        return Text("\(pct)% of peers like you chose this\(top ? "  ★ most popular" : "")")
+            .font(.system(size: 10, design: .monospaced))
+            .foregroundColor(top ? amber : dim)
     }
 
     private func split(_ label: String, _ pct: Int) -> some View {

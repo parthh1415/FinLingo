@@ -68,6 +68,10 @@ final class EconomyEngine: ObservableObject {
     /// Seconds remaining in the current throttle window. Only meaningful while
     /// `isOverheated` is `true`.
     private var throttleRemaining: Double = 0
+    /// Time accrued toward the next net-worth history sample.
+    private var sampleAccumulator: Double = 0
+    private let sampleInterval: Double = 10   // seconds between samples
+    private let maxSamples = 50
 
     // MARK: - Init
 
@@ -137,6 +141,16 @@ final class EconomyEngine: ObservableObject {
         // money doesn't earn a full period of return the instant it lands.
         gameState.investedBalance += gameState.investedBalance * annualReturn * (dt / secondsPerYear)
         gameState.investedBalance += invested
+
+        // Periodically snapshot net worth for the shareable progress curve.
+        sampleAccumulator += dt
+        if sampleAccumulator >= sampleInterval {
+            sampleAccumulator = 0
+            gameState.netWorthHistory.append(gameState.netWorth)
+            if gameState.netWorthHistory.count > maxSamples {
+                gameState.netWorthHistory.removeFirst(gameState.netWorthHistory.count - maxSamples)
+            }
+        }
     }
 
     // MARK: - Interaction
