@@ -10,6 +10,8 @@ final class GameUIState: ObservableObject {
     @Published var showBudget = false
     @Published var showMarketplace = false
     @Published var welcomeBackAmount: Double = 0
+    /// When a lesson's "Practice this" link opens the Simulator, which tool to jump straight to.
+    @Published var pendingSimTool: SimTool?
 
     /// Close any open panel — used before showing the welcome-back popup so modals never stack.
     func closePanels() {
@@ -44,7 +46,7 @@ struct GameView: View {
         let uiState = GameUIState()
         let world = WorldScene(gameState: gs, economy: engine, stageController: controller)
         world.onOpenLessons = { [uiState] in Sound.tap(); uiState.closePanels(); uiState.showLessons = true }
-        world.onOpenSimulator = { [uiState] in Sound.tap(); uiState.closePanels(); uiState.showSimulator = true }
+        world.onOpenSimulator = { [uiState] in Sound.tap(); uiState.closePanels(); uiState.pendingSimTool = nil; uiState.showSimulator = true }
 
         _gameState = StateObject(wrappedValue: gs)
         _economy = StateObject(wrappedValue: engine)
@@ -105,10 +107,15 @@ struct GameView: View {
 
             // Overlays
             if ui.showLessons {
-                LessonsView(gameState: gameState) { ui.showLessons = false }
+                LessonsView(gameState: gameState, onPractice: { tool in
+                    // Hop straight from a lesson to the matching hands-on Simulator tool.
+                    ui.pendingSimTool = tool
+                    ui.showLessons = false
+                    ui.showSimulator = true
+                }) { ui.showLessons = false }
             }
             if ui.showSimulator {
-                SimulatorView(gameState: gameState) { ui.showSimulator = false }
+                SimulatorView(gameState: gameState, initialTool: ui.pendingSimTool) { ui.showSimulator = false }
             }
             if ui.showCareer {
                 CareerView(gameState: gameState) { ui.showCareer = false }
