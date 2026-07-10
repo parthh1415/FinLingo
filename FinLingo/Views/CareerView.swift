@@ -84,9 +84,26 @@ struct CareerView: View {
         .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
     }
 
+    // Shows the player's real job + salary; raises and hustles grow this number.
+    private var jobHeader: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(gameState.jobTitle.isEmpty ? "YOUR ROLE" : gameState.jobTitle.uppercased())
+                .font(.system(.caption2, design: .monospaced).weight(.bold)).foregroundColor(term)
+            Text("\(gameState.playerName.isEmpty ? "You" : gameState.playerName) · \(CurrencyFormat.short(gameState.monthlyIncome))/mo · \(CurrencyFormat.short(gameState.monthlyIncome * 12))/yr")
+                .font(.system(.subheadline, design: .monospaced)).foregroundColor(cream)
+            Text("Every raise and side hustle below builds on your real salary.")
+                .font(.system(.caption, design: .monospaced)).foregroundColor(dim)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.035))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
     private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                jobHeader
                 negotiationCard
                 Text("> side hustles").font(.system(.caption, design: .monospaced)).foregroundColor(term)
                 ForEach(CareerContent.hustles) { hustle in hustleRow(hustle) }

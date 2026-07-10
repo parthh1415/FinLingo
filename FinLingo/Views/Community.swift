@@ -66,7 +66,8 @@ struct ShareCard: View {
             HStack {
                 Text("FinLingo").font(.system(.headline, design: .monospaced).weight(.bold)).foregroundColor(amber)
                 Spacer()
-                Text("my money journey").font(.system(.caption, design: .monospaced)).foregroundColor(dim)
+                Text(gameState.playerName.isEmpty ? "my money journey" : "\(gameState.playerName)'s journey")
+                    .font(.system(.caption, design: .monospaced)).foregroundColor(dim)
             }
 
             VStack(alignment: .leading, spacing: 2) {

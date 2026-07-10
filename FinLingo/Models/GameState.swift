@@ -45,8 +45,19 @@ final class GameState: ObservableObject, Codable {
     /// A rolling sample of net worth over time, used to draw the shareable progress curve.
     @Published var netWorthHistory: [Double]
 
-    /// Everything the player is worth: spendable cash plus investments.
-    var netWorth: Double { cash + investedBalance }
+    // MARK: - Personal details (entered at onboarding; drive every calculation)
+
+    /// The player's first name, for a personal touch throughout.
+    @Published var playerName: String
+    /// Current age — the Future You projection starts here.
+    @Published var age: Int
+    /// The player's job title, shown on the Career screen.
+    @Published var jobTitle: String
+    /// Existing debt (loans/cards); subtracts from net worth and pre-fills the debt tool.
+    @Published var debt: Double
+
+    /// Everything the player is worth: spendable cash plus investments, minus debt.
+    var netWorth: Double { cash + investedBalance - debt }
 
     init(
         companyName: String = "Dorm Room Labs",
@@ -66,7 +77,11 @@ final class GameState: ObservableObject, Codable {
         negotiationDone: Bool = false,
         investAllocation: Double = 0,
         investedBalance: Double = 0,
-        netWorthHistory: [Double] = []
+        netWorthHistory: [Double] = [],
+        playerName: String = "",
+        age: Int = 25,
+        jobTitle: String = "",
+        debt: Double = 0
     ) {
         self.companyName = companyName
         self.cash = cash
@@ -86,6 +101,10 @@ final class GameState: ObservableObject, Codable {
         self.investAllocation = investAllocation
         self.investedBalance = investedBalance
         self.netWorthHistory = netWorthHistory
+        self.playerName = playerName
+        self.age = age
+        self.jobTitle = jobTitle
+        self.debt = debt
     }
 
     // MARK: - Convenience
@@ -108,6 +127,7 @@ final class GameState: ObservableObject, Codable {
         case hasOnboarded, monthlyIncome, monthlySpending, goals, household
         case sideHustles, negotiationDone
         case investAllocation, investedBalance, netWorthHistory
+        case playerName, age, jobTitle, debt
     }
 
     convenience init(from decoder: Decoder) throws {
@@ -131,7 +151,11 @@ final class GameState: ObservableObject, Codable {
             negotiationDone: try c.decodeIfPresent(Bool.self, forKey: .negotiationDone) ?? false,
             investAllocation: try c.decodeIfPresent(Double.self, forKey: .investAllocation) ?? 0,
             investedBalance: try c.decodeIfPresent(Double.self, forKey: .investedBalance) ?? 0,
-            netWorthHistory: try c.decodeIfPresent([Double].self, forKey: .netWorthHistory) ?? []
+            netWorthHistory: try c.decodeIfPresent([Double].self, forKey: .netWorthHistory) ?? [],
+            playerName: try c.decodeIfPresent(String.self, forKey: .playerName) ?? "",
+            age: try c.decodeIfPresent(Int.self, forKey: .age) ?? 25,
+            jobTitle: try c.decodeIfPresent(String.self, forKey: .jobTitle) ?? "",
+            debt: try c.decodeIfPresent(Double.self, forKey: .debt) ?? 0
         )
     }
 
@@ -155,5 +179,9 @@ final class GameState: ObservableObject, Codable {
         try c.encode(investAllocation, forKey: .investAllocation)
         try c.encode(investedBalance, forKey: .investedBalance)
         try c.encode(netWorthHistory, forKey: .netWorthHistory)
+        try c.encode(playerName, forKey: .playerName)
+        try c.encode(age, forKey: .age)
+        try c.encode(jobTitle, forKey: .jobTitle)
+        try c.encode(debt, forKey: .debt)
     }
 }

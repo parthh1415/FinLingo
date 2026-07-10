@@ -14,8 +14,14 @@ struct FutureYouView: View {
     @ObservedObject var gameState: GameState
     var onBack: () -> Void
 
-    @State private var age = 25.0
+    @State private var age: Double
     @State private var reveal = 0.0
+
+    init(gameState: GameState, onBack: @escaping () -> Void) {
+        self.gameState = gameState
+        self.onBack = onBack
+        _age = State(initialValue: Double(min(max(gameState.age, 18), 45)))
+    }
 
     private let targetAge = 65
     private let thresholds: [(label: String, value: Double)] = [
@@ -80,7 +86,7 @@ struct FutureYouView: View {
 
     private var headline: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("AT \(targetAge), YOU'RE ON TRACK FOR")
+            Text(gameState.playerName.isEmpty ? "AT \(targetAge), YOU'RE ON TRACK FOR" : "\(gameState.playerName.uppercased()) — AT \(targetAge) YOU'RE ON TRACK FOR")
                 .font(.system(.caption2, design: .monospaced).weight(.bold)).foregroundColor(green)
             Text(CurrencyFormat.short(current.last ?? 0))
                 .font(.system(size: 40, weight: .heavy, design: .monospaced)).foregroundColor(cream).monospacedDigit()

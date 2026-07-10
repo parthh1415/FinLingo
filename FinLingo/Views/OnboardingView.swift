@@ -13,8 +13,13 @@ struct OnboardingView: View {
     /// Called once the profile is saved, so the root can switch to the game.
     var onComplete: () -> Void
 
+    @State private var nameText = ""
+    @State private var ageText = ""
+    @State private var jobText = ""
     @State private var incomeText = ""
     @State private var spendingText = ""
+    @State private var savingsText = ""
+    @State private var debtText = ""
     @State private var goals: [String] = []
     @State private var household = "just_me"
 
@@ -81,11 +86,20 @@ struct OnboardingView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Let's set up your money life").font(.system(.title3, design: .monospaced).weight(.bold)).foregroundColor(cream)
-                Text("A few quick things so FinLingo can tailor your lessons. You start with $1,000.")
+                Text("Your real numbers, so every projection is actually about you. You start the game with $1,000 to play with.")
                     .font(.system(.caption, design: .monospaced)).foregroundColor(dim).lineSpacing(2)
 
+                field(label: "First name", text: $nameText, placeholder: "e.g. Maya", keyboard: .default)
+                HStack(alignment: .top, spacing: 10) {
+                    field(label: "Age", text: $ageText, placeholder: "e.g. 24")
+                    field(label: "Job title", text: $jobText, placeholder: "e.g. Analyst", keyboard: .default)
+                }
                 field(label: "Monthly income", text: $incomeText, placeholder: "e.g. 3000")
                 field(label: "Typical monthly spending (optional)", text: $spendingText, placeholder: "e.g. 1800")
+                HStack(alignment: .top, spacing: 10) {
+                    field(label: "Saved / invested", text: $savingsText, placeholder: "e.g. 2000")
+                    field(label: "Debt owed", text: $debtText, placeholder: "e.g. 1500")
+                }
 
                 Text("> what are you working toward?").font(.system(.caption, design: .monospaced)).foregroundColor(term)
                 chips(Self.goalOptions, isOn: { goals.contains($0) }, tap: toggleGoal)
@@ -98,11 +112,11 @@ struct OnboardingView: View {
         .frame(maxHeight: 520)
     }
 
-    private func field(label: String, text: Binding<String>, placeholder: String) -> some View {
+    private func field(label: String, text: Binding<String>, placeholder: String, keyboard: UIKeyboardType = .numberPad) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label).font(.system(.caption, design: .monospaced).weight(.bold)).foregroundColor(cream)
             TextField("", text: text, prompt: Text(placeholder).foregroundColor(dim))
-                .keyboardType(.numberPad)
+                .keyboardType(keyboard)
                 .font(.system(.body, design: .monospaced))
                 .foregroundColor(cream)
                 .padding(12)
@@ -148,8 +162,11 @@ struct OnboardingView: View {
     private func submit() {
         guard let income else { return }
         // Cap the free-text numbers so downstream Int() conversions can never overflow/crash.
-        let cap = 1_000_000.0
+        let cap = 100_000_000.0
         let spending = min(max(Double(spendingText) ?? 0, 0), cap)
+        let savings = min(max(Double(savingsText) ?? 0, 0), cap)
+        let debt = min(max(Double(debtText) ?? 0, 0), cap)
+        let age = min(max(Int(ageText) ?? 25, 16), 100)
         let state = GameState(
             cash: 1000,
             lastSeen: Date(),
@@ -157,7 +174,14 @@ struct OnboardingView: View {
             monthlyIncome: min(income, cap),
             monthlySpending: spending,
             goals: goals,
-            household: household
+            household: household,
+            // Their existing savings/investments become the starting invested balance so it
+            // compounds and shows up in net worth and Future You.
+            investedBalance: savings,
+            playerName: nameText.trimmingCharacters(in: .whitespaces),
+            age: age,
+            jobTitle: jobText.trimmingCharacters(in: .whitespaces),
+            debt: debt
         )
         PersistenceController.save(state)
         onComplete()

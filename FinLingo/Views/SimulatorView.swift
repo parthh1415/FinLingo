@@ -96,7 +96,7 @@ struct SimulatorView: View {
                 case .grower:
                     CompoundGrower { tool = nil }
                 case .debt:
-                    DebtPayoffCalculator { tool = nil }
+                    DebtPayoffCalculator(gameState: gameState) { tool = nil }
                 case .emergency:
                     EmergencyFundCalculator(gameState: gameState) { tool = nil }
                 }
@@ -616,10 +616,19 @@ private struct CompoundGrower: View {
 // MARK: - Debt payoff (pairs with the credit lesson)
 
 private struct DebtPayoffCalculator: View {
+    @ObservedObject var gameState: GameState
     var onBack: () -> Void
-    @State private var balance = 3000.0
+    @State private var balance: Double
     @State private var apr = 0.22
     @State private var payment = 150.0
+
+    init(gameState: GameState, onBack: @escaping () -> Void) {
+        self.gameState = gameState
+        self.onBack = onBack
+        // Pre-fill with the player's real debt (clamped to the slider range).
+        let d = gameState.debt > 0 ? gameState.debt : 3000
+        _balance = State(initialValue: min(max(d, 500), 15000))
+    }
 
     // Months to clear the balance and the interest paid along the way.
     private var result: (months: Int?, interest: Double) {
@@ -668,13 +677,15 @@ private struct EmergencyFundCalculator: View {
     var onBack: () -> Void
 
     @State private var essentials: Double
-    @State private var savings = 2000.0
+    @State private var savings: Double
 
     init(gameState: GameState, onBack: @escaping () -> Void) {
         self.gameState = gameState
         self.onBack = onBack
         let seed = gameState.monthlySpending > 0 ? gameState.monthlySpending : 2000
         _essentials = State(initialValue: min(max(seed, 500), 6000)) // keep inside the slider range
+        // Pre-fill "saved so far" with what they actually have invested/saved.
+        _savings = State(initialValue: min(max(gameState.investedBalance, 0), 30000))
     }
 
     private var monthsCovered: Double { essentials > 0 ? savings / essentials : 0 }
