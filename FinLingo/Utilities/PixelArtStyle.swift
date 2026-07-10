@@ -102,8 +102,10 @@ enum PixelArtStyle {
         }
     }
 
-    private static func createPlaceholderTexture(named name: String, size: CGSize) -> SKTexture {
-        let image = makeImage(size: size) { context, canvas in
+    /// Draws the named pixel art as a `UIImage` — used by SwiftUI (e.g. the tutorial coach) as
+    /// well as the SpriteKit texture path below, so both share one drawing routine.
+    static func pixelArtImage(named name: String, size: CGSize) -> UIImage {
+        makeImage(size: size) { context, canvas in
             switch name {
             case "dorm_floor":
                 drawFloor(in: context, size: canvas)
@@ -182,7 +184,10 @@ enum PixelArtStyle {
                 rect(context, x: 2, y: 2, w: canvas.width - 4, h: 2, Palette.woodHighlight)
             }
         }
-        return SKTexture(image: image)
+    }
+
+    private static func createPlaceholderTexture(named name: String, size: CGSize) -> SKTexture {
+        SKTexture(image: pixelArtImage(named: name, size: size))
     }
 
     static func filledTexture(size: CGSize, color: UIColor, outline: UIColor? = nil) -> SKTexture {

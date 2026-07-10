@@ -31,6 +31,8 @@ final class GameState: ObservableObject, Codable {
 
     /// Whether the player has finished the opening profile setup.
     @Published var hasOnboarded: Bool
+    /// Whether the one-time coach tour (shown right after onboarding) has run.
+    @Published var hasSeenTutorial: Bool
     /// The player's monthly income — the sole source of passive earnings (design §6).
     @Published var monthlyIncome: Double
     /// Typical monthly spending; context for budgeting lessons.
@@ -78,6 +80,7 @@ final class GameState: ObservableObject, Codable {
         answeredQuestions: Set<String> = [],
         hasPet: Bool = false,
         hasOnboarded: Bool = false,
+        hasSeenTutorial: Bool = false,
         monthlyIncome: Double = 0,
         monthlySpending: Double = 0,
         goals: [String] = [],
@@ -104,6 +107,7 @@ final class GameState: ObservableObject, Codable {
         self.answeredQuestions = answeredQuestions
         self.hasPet = hasPet
         self.hasOnboarded = hasOnboarded
+        self.hasSeenTutorial = hasSeenTutorial
         self.monthlyIncome = monthlyIncome
         self.monthlySpending = monthlySpending
         self.goals = goals
@@ -156,7 +160,7 @@ final class GameState: ObservableObject, Codable {
     private enum CodingKeys: String, CodingKey {
         case companyName, cash, ownedGear, currentStageIndex, unlockedStageIndex, lastSeen
         case completedLessons, completedChallenges, answeredQuestions, hasPet
-        case hasOnboarded, monthlyIncome, monthlySpending, goals, household
+        case hasOnboarded, hasSeenTutorial, monthlyIncome, monthlySpending, goals, household
         case sideHustles, negotiationDone
         case investAllocation, investedBalance, netWorthHistory
         case playerName, age, jobTitle, debt, monthIndex
@@ -177,6 +181,7 @@ final class GameState: ObservableObject, Codable {
             answeredQuestions: try c.decodeIfPresent(Set<String>.self, forKey: .answeredQuestions) ?? [],
             hasPet: try c.decodeIfPresent(Bool.self, forKey: .hasPet) ?? false,
             hasOnboarded: try c.decodeIfPresent(Bool.self, forKey: .hasOnboarded) ?? false,
+            hasSeenTutorial: try c.decodeIfPresent(Bool.self, forKey: .hasSeenTutorial) ?? false,
             monthlyIncome: try c.decodeIfPresent(Double.self, forKey: .monthlyIncome) ?? 0,
             monthlySpending: try c.decodeIfPresent(Double.self, forKey: .monthlySpending) ?? 0,
             goals: try c.decodeIfPresent([String].self, forKey: .goals) ?? [],
@@ -207,6 +212,7 @@ final class GameState: ObservableObject, Codable {
         try c.encode(answeredQuestions, forKey: .answeredQuestions)
         try c.encode(hasPet, forKey: .hasPet)
         try c.encode(hasOnboarded, forKey: .hasOnboarded)
+        try c.encode(hasSeenTutorial, forKey: .hasSeenTutorial)
         try c.encode(monthlyIncome, forKey: .monthlyIncome)
         try c.encode(monthlySpending, forKey: .monthlySpending)
         try c.encode(goals, forKey: .goals)

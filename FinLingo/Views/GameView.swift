@@ -63,6 +63,7 @@ struct GameView: View {
     private var gameCovered: Bool {
         ui.showLessons || ui.showSimulator || ui.showCareer
             || ui.showBudget || ui.showMarketplace || ui.welcomeBackAmount >= 1
+            || (gameState.hasOnboarded && !gameState.hasSeenTutorial)   // the coach tour freezes the world too
     }
 
     var body: some View {
@@ -131,6 +132,14 @@ struct GameView: View {
             }
             if let event = sim.pendingEvent {
                 LifeEventView(event: event) { sim.resolve($0) }
+            }
+
+            // One-time coach tour for brand-new players — sits on top of everything.
+            if gameState.hasOnboarded && !gameState.hasSeenTutorial {
+                TutorialOverlay(playerName: gameState.playerName) {
+                    gameState.hasSeenTutorial = true
+                    PersistenceController.save(gameState)
+                }
             }
         }
         .onAppear { creditOfflineEarnings(); sim.start() }
