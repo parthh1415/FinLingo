@@ -390,10 +390,16 @@ private struct LessonDetail: View {
     @State private var questionIndex = 0
     /// Correctness of each question answered so far, in order.
     @State private var results: [Bool] = []
+    /// The cash change actually applied for each answered question, in order. `0` means the
+    /// question had already been scored on a previous run and so paid/charged nothing.
+    @State private var deltas: [Double] = []
 
-    private var alreadyDone: Bool { gameState.completedLessons.contains(lesson.id) }
     private var finished: Bool { questionIndex >= lesson.questions.count }
     private var allCorrect: Bool { results.count == lesson.questions.count && results.allSatisfy { $0 } }
+
+    /// Cash awarded for a correct answer; the wrong-answer penalty is half this, so a
+    /// correct answer is always worth more than a mistake costs.
+    private var perQuestionReward: Double { lesson.reward / Double(max(lesson.questions.count, 1)) }
 
     var body: some View {
         ScrollView {
@@ -412,11 +418,13 @@ private struct LessonDetail: View {
                     summary
                 } else {
                     QuestionCard(question: lesson.questions[questionIndex], palette: palette) { correct in
-                        results.append(correct)
+                        score(correct, question: lesson.questions[questionIndex])
                     }
                     .id(lesson.questions[questionIndex].id)
 
                     if results.count == questionIndex + 1 {
+                        deltaLabel(deltas[questionIndex])
+
                         Button { questionIndex += 1 } label: {
                             Text(questionIndex + 1 == lesson.questions.count ? "FINISH" : "CONTINUE")
                                 .font(.system(.subheadline, design: .monospaced).weight(.bold))
@@ -438,11 +446,44 @@ private struct LessonDetail: View {
             .padding(16)
         }
         .frame(maxHeight: 460)
-        .onChange(of: finished) { _, isFinished in
-            guard isFinished, allCorrect, !alreadyDone else { return }
-            gameState.cash += lesson.reward
-            gameState.completedLessons.insert(lesson.id)
+    }
+
+    /// Applies the cash change for the just-answered question — but only the first time that
+    /// specific question is ever answered, so lessons can't be replayed to farm cash. Cash is
+    /// clamped at 0 so a wrong answer can never push the balance negative.
+    private func score(_ correct: Bool, question: Question) {
+        var applied = 0.0
+        if !gameState.answeredQuestions.contains(question.id) {
+            let intended = correct ? perQuestionReward : -perQuestionReward / 2
+            let before = gameState.cash
+            gameState.cash = max(0, before + intended)
+            applied = gameState.cash - before
+            gameState.answeredQuestions.insert(question.id)
+            // Mark the lesson done once every one of its questions has been answered.
+            if lesson.questions.allSatisfy({ gameState.answeredQuestions.contains($0.id) }) {
+                gameState.completedLessons.insert(lesson.id)
+            }
             PersistenceController.save(gameState)
+        }
+        results.append(correct)
+        deltas.append(applied)
+    }
+
+    /// A one-line "+$30 to your balance" / "-$15 from your balance" note under a question.
+    @ViewBuilder
+    private func deltaLabel(_ delta: Double) -> some View {
+        if delta > 0 {
+            Text("+\(CurrencyFormat.short(delta)) to your balance")
+                .font(.system(.caption, design: .monospaced).weight(.bold))
+                .foregroundColor(palette.term)
+        } else if delta < 0 {
+            Text("\(CurrencyFormat.signed(delta)) from your balance")
+                .font(.system(.caption, design: .monospaced).weight(.bold))
+                .foregroundColor(palette.bad)
+        } else {
+            Text("Already scored earlier — no change.")
+                .font(.system(.caption, design: .monospaced))
+                .foregroundColor(palette.dim)
         }
     }
 
@@ -464,16 +505,22 @@ private struct LessonDetail: View {
     }
 
     private var summary: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            let correctCount = results.filter { $0 }.count
+        let correctCount = results.filter { $0 }.count
+        let netChange = deltas.reduce(0, +)
+        return VStack(alignment: .leading, spacing: 8) {
             Text("\(correctCount)/\(lesson.questions.count) correct")
                 .font(.system(.subheadline, design: .monospaced).weight(.bold))
                 .foregroundColor(allCorrect ? palette.term : palette.cream)
-            Text(allCorrect
-                 ? (alreadyDone ? "Nailed it — already collected." : "Nailed it! +\(CurrencyFormat.short(lesson.reward)) added.")
-                 : "Not quite everything — reopen the lesson to try again.")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundColor(allCorrect ? palette.term : palette.dim)
+            if netChange > 0 {
+                Text("Balance: +\(CurrencyFormat.short(netChange)) this run.")
+                    .font(.system(.caption, design: .monospaced)).foregroundColor(palette.term)
+            } else if netChange < 0 {
+                Text("Balance: \(CurrencyFormat.signed(netChange)) this run.")
+                    .font(.system(.caption, design: .monospaced)).foregroundColor(palette.bad)
+            } else {
+                Text("No change — these questions were already scored.")
+                    .font(.system(.caption, design: .monospaced)).foregroundColor(palette.dim)
+            }
         }
     }
 }
