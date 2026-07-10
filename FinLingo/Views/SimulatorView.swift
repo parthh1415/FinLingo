@@ -9,6 +9,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct TradeScenario: Identifiable {
     let id: String
@@ -229,6 +230,10 @@ private struct TradingSandbox: View {
     @State private var shares = 0.0
     @State private var cashedOut = false
     @State private var rewardGiven = 0.0
+    @State private var playing = false
+
+    // Drives auto-play: one trading day advances every tick while `playing`.
+    private let clock = Timer.publish(every: 0.45, on: .main, in: .common).autoconnect()
 
     private let screenGreen = Color(red: 0.55, green: 0.80, blue: 0.52)
     private let cream = Color(red: 0.96, green: 0.90, blue: 0.70)
@@ -255,6 +260,10 @@ private struct TradingSandbox: View {
             .padding(16)
         }
         .frame(maxHeight: 500)
+        .onReceive(clock) { _ in
+            guard playing else { return }
+            if isLastDay { playing = false } else { withAnimation(.linear(duration: 0.25)) { day += 1 } }
+        }
     }
 
     private var header: some View {
@@ -274,16 +283,40 @@ private struct TradingSandbox: View {
             let lo = visible.min() ?? 0
             let hi = visible.max() ?? 1
             let span = max(hi - lo, 0.0001)
-            Path { p in
-                for (i, value) in visible.enumerated() {
-                    let x = visible.count == 1 ? 0 : geo.size.width * CGFloat(i) / CGFloat(scenario.prices.count - 1)
-                    let y = geo.size.height * (1 - CGFloat((value - lo) / span))
-                    if i == 0 { p.move(to: CGPoint(x: x, y: y)) } else { p.addLine(to: CGPoint(x: x, y: y)) }
-                }
+            let color = profit >= 0 ? screenGreen : red
+            let pt: (Int, Double) -> CGPoint = { i, value in
+                let x = scenario.prices.count <= 1 ? 0 : geo.size.width * CGFloat(i) / CGFloat(scenario.prices.count - 1)
+                let y = geo.size.height * (1 - CGFloat((value - lo) / span))
+                return CGPoint(x: x, y: y)
             }
-            .stroke(profit >= 0 ? screenGreen : red, style: StrokeStyle(lineWidth: 2, lineJoin: .round))
+            let last = pt(visible.count - 1, visible.last ?? 0)
+
+            ZStack {
+                // baseline grid
+                ForEach(0..<3) { i in
+                    Rectangle().fill(Color.white.opacity(0.05)).frame(height: 1)
+                        .position(x: geo.size.width / 2, y: geo.size.height * CGFloat(i) / 2)
+                }
+                // gradient area under the line
+                Path { p in
+                    p.move(to: CGPoint(x: 0, y: geo.size.height))
+                    for (i, v) in visible.enumerated() { p.addLine(to: pt(i, v)) }
+                    p.addLine(to: CGPoint(x: last.x, y: geo.size.height))
+                    p.closeSubpath()
+                }
+                .fill(LinearGradient(colors: [color.opacity(0.30), color.opacity(0.02)], startPoint: .top, endPoint: .bottom))
+                // the line
+                Path { p in
+                    for (i, v) in visible.enumerated() { i == 0 ? p.move(to: pt(i, v)) : p.addLine(to: pt(i, v)) }
+                }
+                .stroke(color, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                // current price marker
+                Circle().fill(color).frame(width: 9, height: 9)
+                    .overlay(Circle().stroke(Color(red: 0.055, green: 0.075, blue: 0.09), lineWidth: 2))
+                    .position(last)
+            }
         }
-        .frame(height: 90)
+        .frame(height: 120)
         .padding(10)
         .background(Color.white.opacity(0.03))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -308,13 +341,20 @@ private struct TradingSandbox: View {
 
     private var controls: some View {
         VStack(spacing: 10) {
+            if isLastDay {
+                actionButton("CASH OUT", enabled: true, color: amber) { playing = false; cashOut() }
+            } else {
+                actionButton(playing ? "⏸  PAUSE" : (day == 0 ? "▶  PLAY" : "▶  RESUME"),
+                             enabled: true, color: amber) { playing.toggle() }
+            }
+            // Buy and sell stay live while it plays — react to the price as it moves.
             HStack(spacing: 10) {
                 actionButton("BUY 25%", enabled: cash > price, color: screenGreen) { buy() }
                 actionButton("SELL ALL", enabled: shares > 0, color: red) { sellAll() }
             }
-            actionButton(isLastDay ? "CASH OUT" : "NEXT DAY ▸", enabled: true, color: amber) {
-                if isLastDay { cashOut() } else { day += 1 }
-            }
+            Text(playing ? "Playing… buy the dips, sell the rips." : "Press play and trade as the price moves.")
+                .font(.system(size: 10, design: .monospaced)).foregroundColor(dim)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 
@@ -337,7 +377,7 @@ private struct TradingSandbox: View {
             Text("\(profit >= 0 ? "+" : "")$" + String(format: "%.0f", profit) + " on your $" + String(format: "%.0f", TradingContent.startingCash) + " practice fund")
                 .font(.system(.subheadline, design: .monospaced)).foregroundColor(cream)
             if rewardGiven > 0 {
-                Text("Cashed \(CurrencyFormat.short(rewardGiven)) of profit into your wallet.")
+                Text("Invested \(CurrencyFormat.short(rewardGiven)) of profit — it now compounds toward your Future You.")
                     .font(.system(.caption, design: .monospaced)).foregroundColor(amber)
             } else {
                 Text("No profit to bank this time — the practice is free. Try again?")
@@ -365,10 +405,11 @@ private struct TradingSandbox: View {
     private func cashOut() {
         sellAll()
         cashedOut = true
-        // Bank the profit once per scenario — practice paying off in real cash.
+        // Profit goes into investments (once per scenario), so trading practice compounds
+        // into net worth and shows up in the Future You projection — not just spendable cash.
         let key = "trade_\(scenario.id)"
         if profit > 0, !gameState.completedChallenges.contains(key) {
-            gameState.cash += profit
+            gameState.investedBalance += profit
             gameState.completedChallenges.insert(key)
             rewardGiven = profit
             PersistenceController.save(gameState)

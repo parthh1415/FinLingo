@@ -97,6 +97,20 @@ struct FutureYouView: View {
             let w = geo.size.width
             let h = geo.size.height
 
+            // Soft gradient fill under your path.
+            Path { p in
+                p.move(to: CGPoint(x: 0, y: h))
+                for (i, v) in cur.enumerated() {
+                    let x = cur.count <= 1 ? 0 : w * CGFloat(i) / CGFloat(cur.count - 1)
+                    let y = h * (1 - CGFloat(min(v, hi) / hi))
+                    p.addLine(to: CGPoint(x: x, y: y))
+                }
+                p.addLine(to: CGPoint(x: w, y: h))
+                p.closeSubpath()
+            }
+            .fill(LinearGradient(colors: [green.opacity(0.28), green.opacity(0.02)], startPoint: .top, endPoint: .bottom))
+            .opacity(reveal)
+
             // Faded "if you invested more" line.
             line(boo, w: w, h: h, hi: hi).trim(from: 0, to: reveal)
                 .stroke(amber.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))

@@ -105,14 +105,27 @@ struct ShareCard: View {
             let lo = pts.min() ?? 0
             let hi = pts.max() ?? 1
             let span = max(hi - lo, 0.0001)
-            let path = Path { p in
-                for (i, value) in pts.enumerated() {
-                    let x = pts.count == 1 ? 0 : geo.size.width * CGFloat(i) / CGFloat(pts.count - 1)
-                    let y = geo.size.height * (1 - CGFloat((value - lo) / span))
-                    if i == 0 { p.move(to: CGPoint(x: x, y: y)) } else { p.addLine(to: CGPoint(x: x, y: y)) }
-                }
+            let pt: (Int, Double) -> CGPoint = { i, value in
+                let x = pts.count <= 1 ? 0 : geo.size.width * CGFloat(i) / CGFloat(pts.count - 1)
+                let y = geo.size.height * (1 - CGFloat((value - lo) / span))
+                return CGPoint(x: x, y: y)
             }
-            path.stroke(green, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+            let last = pt(pts.count - 1, pts.last ?? 0)
+
+            ZStack {
+                Path { p in
+                    p.move(to: CGPoint(x: 0, y: geo.size.height))
+                    for (i, v) in pts.enumerated() { p.addLine(to: pt(i, v)) }
+                    p.addLine(to: CGPoint(x: last.x, y: geo.size.height))
+                    p.closeSubpath()
+                }
+                .fill(LinearGradient(colors: [green.opacity(0.32), green.opacity(0.02)], startPoint: .top, endPoint: .bottom))
+                Path { p in
+                    for (i, v) in pts.enumerated() { i == 0 ? p.move(to: pt(i, v)) : p.addLine(to: pt(i, v)) }
+                }
+                .stroke(green, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                Circle().fill(green).frame(width: 8, height: 8).position(last)
+            }
         }
     }
 
