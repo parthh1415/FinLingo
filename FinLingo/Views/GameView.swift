@@ -116,6 +116,13 @@ struct GameView: View {
             if ui.welcomeBackAmount >= 1 {
                 WelcomeBackView(amount: ui.welcomeBackAmount) { ui.welcomeBackAmount = 0 }
             }
+            // One-time coach tour for brand-new players — sits on top of everything.
+            if gameState.hasOnboarded && !gameState.hasSeenTutorial {
+                TutorialOverlay(playerName: gameState.playerName) {
+                    gameState.hasSeenTutorial = true
+                    PersistenceController.save(gameState)
+                }
+            }
         }
         .onAppear { creditOfflineEarnings() }
         .onChange(of: scenePhase) { _, phase in

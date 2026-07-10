@@ -102,8 +102,10 @@ enum PixelArtStyle {
         }
     }
 
-    private static func createPlaceholderTexture(named name: String, size: CGSize) -> SKTexture {
-        let image = makeImage(size: size) { context, canvas in
+    /// Renders the procedural pixel-art for `name` as a UIImage. Public so SwiftUI (e.g. the
+    /// coach tour) can show the same character the SpriteKit scene draws.
+    static func pixelArtImage(named name: String, size: CGSize) -> UIImage {
+        makeImage(size: size) { context, canvas in
             switch name {
             case "dorm_floor":
                 drawFloor(in: context, size: canvas)
@@ -180,7 +182,10 @@ enum PixelArtStyle {
                 rect(context, x: 2, y: 2, w: canvas.width - 4, h: 2, Palette.woodHighlight)
             }
         }
-        return SKTexture(image: image)
+    }
+
+    private static func createPlaceholderTexture(named name: String, size: CGSize) -> SKTexture {
+        SKTexture(image: pixelArtImage(named: name, size: size))
     }
 
     static func filledTexture(size: CGSize, color: UIColor, outline: UIColor? = nil) -> SKTexture {
