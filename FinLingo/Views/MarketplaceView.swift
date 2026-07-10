@@ -31,6 +31,7 @@ struct MarketplaceView: View {
     // MARK: - Catalog (all "coming soon" for now)
 
     private let catalog: [ShopItem] = [
+        ShopItem(icon: "🐾", name: "Pet companion", blurb: "Adopt a little buddy to keep you company.", tag: "PET"),
         ShopItem(icon: "🪧", name: "Wall posters", blurb: "Framed art to show off your style.", tag: "DECOR"),
         ShopItem(icon: "✨", name: "String lights", blurb: "Warm fairy lights to cozy up the walls.", tag: "DECOR"),
         ShopItem(icon: "🪴", name: "Potted plants", blurb: "A little green to make it feel alive.", tag: "DECOR"),
@@ -39,7 +40,6 @@ struct MarketplaceView: View {
         ShopItem(icon: "💡", name: "Desk lamp", blurb: "Soft light for late-night study.", tag: "DECOR"),
         ShopItem(icon: "📚", name: "Bookshelf", blurb: "Fill it with your favorites.", tag: "DECOR"),
         ShopItem(icon: "❄️", name: "Mini fridge", blurb: "Snacks within arm's reach.", tag: "DECOR"),
-        ShopItem(icon: "🐾", name: "Pet companion", blurb: "Adopt a little buddy to keep you company.", tag: "PET"),
     ]
 
     // MARK: - Palette
