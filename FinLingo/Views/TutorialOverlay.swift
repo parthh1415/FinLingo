@@ -2,9 +2,9 @@
 //  TutorialOverlay.swift
 //  FinLingo
 //
-//  A one-time coach tour shown right after onboarding. The screen dims, the pixel character is
-//  brought to the front, and it hops between the three key spots — the Learn laptop, the
-//  Simulator laptop, and the Shop — with a short explanation of each, then a send-off.
+//  A one-time coach tour shown right after onboarding. The screen dims and the pixel character
+//  stands at the bottom-left, turning and pointing an arrow at each place the player can go —
+//  the Learn laptop, the Simulator laptop, and the Shop — then a send-off.
 //
 
 import SwiftUI
@@ -12,9 +12,38 @@ import SwiftUI
 private struct TutorialStep {
     let title: String
     let body: String
-    /// Where the character + highlight ring sit, as a fraction of the screen. nil = centered,
-    /// no ring (used for the closing "you're all set" beat).
-    let spot: UnitPoint?
+    /// Where the character points, as a fraction of the screen. nil = no arrow (closing beat).
+    let target: UnitPoint?
+    /// Which way the character faces this step: "up" / "down" / "left" / "right".
+    let facing: String
+}
+
+/// A line with an arrowhead, drawn in absolute screen coordinates (its frame is the full screen).
+private struct ArrowLine: Shape {
+    var from: CGPoint
+    var to: CGPoint
+
+    // Let the arrow animate smoothly as the target changes between steps.
+    var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, AnimatablePair<CGFloat, CGFloat>> {
+        get { AnimatablePair(AnimatablePair(from.x, from.y), AnimatablePair(to.x, to.y)) }
+        set {
+            from = CGPoint(x: newValue.first.first, y: newValue.first.second)
+            to = CGPoint(x: newValue.second.first, y: newValue.second.second)
+        }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: from)
+        p.addLine(to: to)
+        let angle = atan2(to.y - from.y, to.x - from.x)
+        let headLen: CGFloat = 15
+        let spread = CGFloat.pi / 7
+        p.move(to: CGPoint(x: to.x - headLen * cos(angle - spread), y: to.y - headLen * sin(angle - spread)))
+        p.addLine(to: to)
+        p.addLine(to: CGPoint(x: to.x - headLen * cos(angle + spread), y: to.y - headLen * sin(angle + spread)))
+        return p
+    }
 }
 
 struct TutorialOverlay: View {
@@ -22,7 +51,10 @@ struct TutorialOverlay: View {
     var onFinish: () -> Void
 
     @State private var index = 0
-    @State private var ringPulse = false
+    @State private var pulse = false
+
+    /// The character's fixed home: middle-bottom, left side.
+    private let charSpot = UnitPoint(x: 0.24, y: 0.70)
 
     // Terminal palette, matching the rest of the game's screens.
     private let screen = Color(red: 0.055, green: 0.075, blue: 0.09)
@@ -37,23 +69,23 @@ struct TutorialOverlay: View {
         return [
             TutorialStep(
                 title: "① LEARN",
-                body: "\(hi) That laptop on the left is where you learn — bite-size money lessons on budgeting, investing, and credit. Every question you get right pays real cash into your account.",
-                spot: UnitPoint(x: 0.30, y: 0.40)
+                body: "\(hi) That laptop up there is where you learn — bite-size money lessons on budgeting, investing, and credit. Every question you get right pays real cash into your account.",
+                target: UnitPoint(x: 0.34, y: 0.36), facing: "up"
             ),
             TutorialStep(
                 title: "② SIMULATE",
                 body: "The laptop on the right is your practice sandbox. Trade real market history, project a 401(k), plan a debt payoff, and meet your Future You — all with zero risk.",
-                spot: UnitPoint(x: 0.70, y: 0.40)
+                target: UnitPoint(x: 0.74, y: 0.40), facing: "right"
             ),
             TutorialStep(
                 title: "③ SHOP",
-                body: "Down here is the Shop. Soon you'll deck out your dorm — posters, plants, string lights, even a pet — to make the place feel like home.",
-                spot: UnitPoint(x: 0.84, y: 0.92)
+                body: "Over in the corner is the Shop. Soon you'll deck out your dorm — posters, plants, string lights, even a pet — to make the place feel like home.",
+                target: UnitPoint(x: 0.86, y: 0.90), facing: "right"
             ),
             TutorialStep(
                 title: "YOU'RE ALL SET",
                 body: "That's the grand tour! Explore, tap around, and start building your money life. Have fun — now go make some money! 💸",
-                spot: nil
+                target: nil, facing: "down"
             ),
         ]
     }
@@ -63,67 +95,67 @@ struct TutorialOverlay: View {
 
     var body: some View {
         GeometryReader { geo in
-            ZStack {
+            let charPt = CGPoint(x: geo.size.width * charSpot.x, y: geo.size.height * charSpot.y)
+
+            ZStack(alignment: .topLeading) {
                 // Dim the whole game behind the tour.
                 Color.black.opacity(0.72).ignoresSafeArea()
                     .contentShape(Rectangle())
                     .onTapGesture { advance() }
 
-                if let spot = step.spot {
-                    characterMarker
-                        .position(x: geo.size.width * spot.x, y: geo.size.height * spot.y)
-                        .transition(.opacity)
-                        .id(index) // re-run the entrance each step
+                // Arrow + target ring pointing at the current place.
+                if let target = step.target {
+                    let targetPt = CGPoint(x: geo.size.width * target.x, y: geo.size.height * target.y)
+                    let start = point(from: charPt, toward: targetPt, distance: 42)
+                    let end = point(from: targetPt, toward: charPt, distance: 30)
+
+                    ArrowLine(from: start, to: end)
+                        .stroke(amber, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round, dash: [7, 5]))
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .opacity(pulse ? 1 : 0.55)
+                        .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: pulse)
+
+                    Circle()
+                        .stroke(amber.opacity(0.9), lineWidth: 3)
+                        .frame(width: 56, height: 56)
+                        .scaleEffect(pulse ? 1.15 : 0.9)
+                        .opacity(pulse ? 0.5 : 1)
+                        .position(targetPt)
+                        .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: pulse)
                 }
 
-                VStack {
-                    // Skip in the corner.
+                // The character stays put at the bottom-left, just turning to face each place.
+                characterSprite(facing: step.facing)
+                    .position(charPt)
+
+                // Text card + skip, kept at the top so the bottom stays clear for the pointing.
+                VStack(spacing: 12) {
                     HStack {
                         Spacer()
                         Button { onFinish() } label: {
                             Text("SKIP")
                                 .font(.system(.caption, design: .monospaced).weight(.bold))
                                 .foregroundColor(dim)
-                                .padding(10)
+                                .padding(8)
                         }
                     }
-                    Spacer()
-                    if step.spot == nil { centeredCharacter }
-                    Spacer()
                     card
+                    Spacer()
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 24)
+                .padding(.top, 8)
             }
             .animation(.easeInOut(duration: 0.35), value: index)
         }
         .font(.system(.body, design: .monospaced))
-        .onAppear { ringPulse = true }
+        .onAppear { pulse = true }
     }
 
-    // The character with a pulsing highlight ring, shown at a step's spot.
-    private var characterMarker: some View {
-        ZStack {
-            Circle()
-                .stroke(amber.opacity(0.9), lineWidth: 3)
-                .frame(width: 96, height: 96)
-                .scaleEffect(ringPulse ? 1.12 : 0.92)
-                .opacity(ringPulse ? 0.5 : 1)
-                .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: ringPulse)
-            characterSprite
-        }
-    }
-
-    // Character standing on its own for the closing beat.
-    private var centeredCharacter: some View {
-        characterSprite.scaleEffect(1.15)
-    }
-
-    private var characterSprite: some View {
-        Image(uiImage: PixelArtStyle.pixelArtImage(named: "player_down_idle", size: CGSize(width: 18, height: 26)))
+    private func characterSprite(facing: String) -> some View {
+        Image(uiImage: PixelArtStyle.pixelArtImage(named: "player_\(facing)_idle", size: CGSize(width: 18, height: 26)))
             .resizable()
             .interpolation(.none)
-            .frame(width: 45, height: 65)
+            .frame(width: 48, height: 70)
             .shadow(color: .black.opacity(0.5), radius: 6, y: 3)
     }
 
@@ -168,6 +200,13 @@ struct TutorialOverlay: View {
                     .frame(width: 7, height: 7)
             }
         }
+    }
+
+    /// A point `distance` pixels from `a` along the line toward `b`.
+    private func point(from a: CGPoint, toward b: CGPoint, distance: CGFloat) -> CGPoint {
+        let dx = b.x - a.x, dy = b.y - a.y
+        let len = max(hypot(dx, dy), 0.0001)
+        return CGPoint(x: a.x + dx / len * distance, y: a.y + dy / len * distance)
     }
 
     private func advance() {
